@@ -78,4 +78,18 @@ class MeetingPack extends Model
     {
         return $query->orderBy('sort_order')->orderByDesc('created_at');
     }
+
+    /**
+     * @param Builder<MeetingPack> $query
+     *
+     * @return Builder<MeetingPack>
+     */
+    public function scopeKeyword(Builder $query, ?string $keyword): Builder
+    {
+        if ($keyword === null || $keyword === '') {
+            return $query;
+        }
+
+        return $query->where('name', 'LIKE', '%'.$keyword.'%');
+    }
 }

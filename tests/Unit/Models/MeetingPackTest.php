@@ -87,4 +87,18 @@ class MeetingPackTest extends TestCase
         $this->assertIsInt($fresh->price);
         $this->assertSame(15000, $fresh->price);
     }
+
+    public function test_scope_keyword_filters_by_name(): void
+    {
+        // Arrange
+        MeetingPack::factory()->published()->create(['name' => '特別パック']);
+        $other = MeetingPack::factory()->published()->create(['name' => '通常パック']);
+
+        // Act
+        $results = MeetingPack::keyword('通常')->get();
+
+        // Assert
+        $this->assertCount(1, $results);
+        $this->assertTrue($results->first()->is($other));
+    }
 }
