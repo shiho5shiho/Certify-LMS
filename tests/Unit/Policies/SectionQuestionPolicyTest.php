@@ -73,6 +73,7 @@ class SectionQuestionPolicyTest extends TestCase
         $coach = User::factory()->coach()->create();
         $admin = User::factory()->admin()->create();
         $assignedCert = Certification::factory()->published()->create();
+        $otherCert = Certification::factory()->published()->create();
         CertificationCoachAssignment::create([
             'id' => (string) Str::ulid(),
             'certification_id' => $assignedCert->id,
@@ -80,15 +81,24 @@ class SectionQuestionPolicyTest extends TestCase
             'assigned_by_user_id' => $admin->id,
             'assigned_at' => now(),
         ]);
-        $assignedQuestion = SectionQuestion::factory()->published()->create([
-            'section_id' => Section::factory()->state(fn () => [
-                'chapter_id' => Chapter::factory()
-                    ->for(Part::factory()->for($assignedCert))
-                    ->create()->id,
-            ]),
-        ]);
+
+        $assignedSection = Section::factory()->for(
+            Chapter::factory()->for(Part::factory()->for($assignedCert))
+        )->create();
+        $assignedQuestion = SectionQuestion::factory()->published()->for($assignedSection)->create();
+
+        $otherSection = Section::factory()->for(
+            Chapter::factory()->for(Part::factory()->for($otherCert))
+        )->create();
+        $otherQuestion = SectionQuestion::factory()->published()->for($otherSection)->create();
+
         $policy = new SectionQuestionPolicy;
 
+        $this->assertTrue($policy->viewAny($coach, $assignedSection), 'coachは担当資格配下の演習問題一覧を閲覧できるはず');
+        $this->assertFalse($policy->viewAny($coach, $otherSection), 'coachは非担当資格配下の演習問題一覧を閲覧できないはず');
+        $this->assertTrue($policy->view($coach, $assignedQuestion), 'coachは担当資格の演習問題を閲覧できるはず');
+        $this->assertFalse($policy->view($coach, $otherQuestion), 'coachは非担当資格の演習問題を閲覧できないはず');
         $this->assertTrue($policy->update($coach, $assignedQuestion));
+        $this->assertFalse($policy->update($coach, $otherQuestion), 'coachは非担当資格の演習問題を更新できないはず');
     }
 }

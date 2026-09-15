@@ -56,6 +56,7 @@ class SectionPolicyTest extends TestCase
         $coach = User::factory()->coach()->create();
         $admin = User::factory()->admin()->create();
         $assignedCert = Certification::factory()->published()->create();
+        $otherCert = Certification::factory()->published()->create();
         CertificationCoachAssignment::create([
             'id' => (string) Str::ulid(),
             'certification_id' => $assignedCert->id,
@@ -66,9 +67,19 @@ class SectionPolicyTest extends TestCase
         $part = Part::factory()->for($assignedCert)->published()->create();
         $chapter = Chapter::factory()->for($part)->published()->create();
         $section = Section::factory()->for($chapter)->published()->create();
+
+        $otherPart = Part::factory()->for($otherCert)->published()->create();
+        $otherChapter = Chapter::factory()->for($otherPart)->published()->create();
+        $otherSection = Section::factory()->for($otherChapter)->published()->create();
+
         $policy = new SectionPolicy;
 
+        $this->assertTrue($policy->viewAny($coach, $chapter), 'coachは担当資格配下のSection一覧を閲覧できるはず');
+        $this->assertFalse($policy->viewAny($coach, $otherChapter), 'coachは非担当資格配下のSection一覧を閲覧できないはず');
+        $this->assertTrue($policy->view($coach, $section), 'coachは担当資格のSectionを閲覧できるはず');
+        $this->assertFalse($policy->view($coach, $otherSection), 'coachは非担当資格のSectionを閲覧できないはず');
         $this->assertTrue($policy->update($coach, $section));
+        $this->assertFalse($policy->update($coach, $otherSection), 'coachは非担当資格のSectionを更新できないはず');
         $this->assertTrue($policy->preview($coach, $section));
     }
 }

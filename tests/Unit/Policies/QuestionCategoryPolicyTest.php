@@ -55,6 +55,8 @@ class QuestionCategoryPolicyTest extends TestCase
         $policy = new QuestionCategoryPolicy;
 
         // Act & Assert
+        $this->assertTrue($policy->viewAny($coach, $assignedCert), 'coachは担当資格の出題分野一覧を閲覧できるはず');
+        $this->assertFalse($policy->viewAny($coach, $otherCert), 'coachは非担当資格の出題分野一覧を閲覧できないはず');
         $this->assertTrue($policy->update($coach, $assignedCategory), 'coach は担当資格の category を更新できるはず');
         $this->assertFalse($policy->update($coach, $otherCategory), '非担当資格の category は更新できないはず');
     }

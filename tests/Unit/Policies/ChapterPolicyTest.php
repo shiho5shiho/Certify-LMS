@@ -57,6 +57,10 @@ class ChapterPolicyTest extends TestCase
         $otherChapter = Chapter::factory()->for($otherPart)->published()->create();
         $policy = new ChapterPolicy;
 
+        $this->assertTrue($policy->viewAny($coach, $assignedPart), 'coachは担当資格配下のChapter一覧を閲覧できるはず');
+        $this->assertFalse($policy->viewAny($coach, $otherPart), 'coachは非担当資格配下のChapter一覧を閲覧できないはず');
+        $this->assertTrue($policy->view($coach, $assignedChapter), 'coachは担当資格のChapter詳細を閲覧できるはず');
+        $this->assertFalse($policy->view($coach, $otherChapter), 'coachは非担当資格のChapter詳細を閲覧できないはず');
         $this->assertTrue($policy->update($coach, $assignedChapter));
         $this->assertFalse($policy->update($coach, $otherChapter));
     }
