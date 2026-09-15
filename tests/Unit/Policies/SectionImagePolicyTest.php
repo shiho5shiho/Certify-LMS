@@ -54,10 +54,14 @@ class SectionImagePolicyTest extends TestCase
         $otherSection = Section::factory()->for(
             Chapter::factory()->for(Part::factory()->for($otherCert)->published())->published()
         )->published()->create();
+        $assignedImage = SectionImage::factory()->for($assignedSection)->create();
+        $otherImage = SectionImage::factory()->for($otherSection)->create();
         $policy = new SectionImagePolicy;
 
         $this->assertTrue($policy->create($coach, $assignedSection));
         $this->assertFalse($policy->create($coach, $otherSection));
+        $this->assertTrue($policy->delete($coach, $assignedImage), 'coachは担当資格の画像を削除できるはず');
+        $this->assertFalse($policy->delete($coach, $otherImage), 'coachは非担当資格の画像を削除できないはず');
     }
 
     public function test_student_cannot(): void

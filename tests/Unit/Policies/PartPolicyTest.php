@@ -51,6 +51,10 @@ class PartPolicyTest extends TestCase
         $otherPart = Part::factory()->for($otherCert)->published()->create();
         $policy = new PartPolicy;
 
+        $this->assertTrue($policy->viewAny($coach, $assignedCert), 'coachは担当資格の一覧を閲覧できるはず');
+        $this->assertFalse($policy->viewAny($coach, $otherCert), 'coachは非担当資格の一覧を閲覧できないはず');
+        $this->assertTrue($policy->view($coach, $assignedPart), 'coachは担当資格のPart詳細を閲覧できるはず');
+        $this->assertFalse($policy->view($coach, $otherPart), 'coachは非担当資格のPart詳細を閲覧できないはず');
         $this->assertTrue($policy->update($coach, $assignedPart));
         $this->assertFalse($policy->update($coach, $otherPart));
     }
