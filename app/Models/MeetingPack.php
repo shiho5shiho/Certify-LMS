@@ -90,6 +90,6 @@ class MeetingPack extends Model
             return $query;
         }
 
-        return $query->where('name', 'LIKE', '%' . $keyword . '%');
+        return $query->where('name', 'LIKE', '%'.$keyword.'%');
     }
 }

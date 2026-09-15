@@ -12,8 +12,10 @@ use Illuminate\Support\Facades\DB;
 /**
  * 面談パックを物理削除するユースケース。公開中でなければ削除可能。
  *
- * NOTE: 「購入履歴があっても公開中でなければ削除可としてよいか」はPM確認中（回答待ち）。
- * NGの回答が来た場合、ここに購入履歴チェックを追加する（Payment実装後）。
+ *  NOTE: 現状スキーマには購入履歴を表すテーブル(payments等)が存在せず、meeting_pack_id への外部キー参照も無いため、
+ * 「公開中でなければ常に削除可」で問題ないとPM確認済み（2026-09-15）。
+ * S-A-03（Stripe連携）で購入履歴テーブルが追加された際は、物理削除のままでよいか
+ * （外部キー制約 or カスケード削除の扱い）を改めて設計し直す必要がある。
  *
  * @throws MeetingPackNotDeletableException 公開中の面談パックは削除不可
  */
@@ -25,6 +27,6 @@ final class DestroyAction
             throw new MeetingPackNotDeletableException;
         }
 
-        DB::transaction(fn() => $meetingPack->delete());
+        DB::transaction(fn () => $meetingPack->delete());
     }
 }

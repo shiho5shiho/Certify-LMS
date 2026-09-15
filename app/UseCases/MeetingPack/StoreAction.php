@@ -19,7 +19,7 @@ final class StoreAction
      */
     public function __invoke(User $admin, array $validated): MeetingPack
     {
-        return DB::transaction(fn() => MeetingPack::create([
+        return DB::transaction(fn () => MeetingPack::create([
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'meeting_count' => $validated['meeting_count'],
