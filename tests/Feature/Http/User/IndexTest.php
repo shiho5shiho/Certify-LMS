@@ -116,6 +116,20 @@ class IndexTest extends TestCase
         $response->assertDontSee('active@example.test');
     }
 
+    public function test_in_progress_filter_excludes_withdrawn(): void
+    {
+        $admin = User::factory()->admin()->create();
+        User::factory()->create(['email' => 'active@example.test']);
+        $gone = User::factory()->create(['email' => 'gone@example.test']);
+        app(UserWithdrawalService::class)->withdraw($gone);
+
+        $response = $this->actingAs($admin)->get(route('admin.users.index', ['status' => 'in_progress']));
+
+        $response->assertOk();
+        $response->assertSee('active@example.test');
+        $response->assertDontSee($gone->fresh()->email);
+    }
+
     public function test_paginates_20_per_page(): void
     {
         $admin = User::factory()->admin()->create();
