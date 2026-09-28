@@ -90,6 +90,27 @@ class Plan extends Model
      */
     public function scopeOrdered(Builder $query): Builder
     {
-        return $query->orderBy('sort_order')->orderByDesc('created_at');
+        return $query
+            ->orderByRaw('FIELD(status, ?, ?, ?)', [
+                PlanStatus::Published->value,
+                PlanStatus::Draft->value,
+                PlanStatus::Archived->value,
+            ])
+            ->orderBy('sort_order')
+            ->orderByDesc('created_at');
+    }
+
+    /**
+     * @param Builder<Plan> $query
+     *
+     * @return Builder<Plan>
+     */
+    public function scopeKeyword(Builder $query, ?string $keyword): Builder
+    {
+        if ($keyword === null || $keyword === '') {
+            return $query;
+        }
+
+        return $query->where('name', 'LIKE', '%'.$keyword.'%');
     }
 }
