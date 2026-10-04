@@ -70,7 +70,7 @@
                     :value="old('passing_score', 60)"
                     :error="$errors->first('passing_score')"
                     :required="true"
-                    hint="1〜100 の整数。受講生がこの百分率を超えると合格"
+                    hint="1〜100 の整数。受講生の得点率がこの百分率以上で合格"
                 />
             </div>
 

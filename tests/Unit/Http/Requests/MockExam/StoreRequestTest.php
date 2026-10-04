@@ -66,6 +66,52 @@ class StoreRequestTest extends TestCase
         $response->assertJsonValidationErrors($invalidField);
     }
 
+    #[DataProvider('validPassingScoreBoundaries')]
+    public function test_validation_passes_with_passing_score_boundary(int $passingScore): void
+    {
+        // Arrange
+        $admin = User::factory()->admin()->create();
+        $cert = Certification::factory()->published()->create();
+
+        // Act
+        $response = $this->actingAs($admin)->post(route('admin.mock-exams.store'), [
+            'certification_id' => $cert->id,
+            'title' => 'Sample',
+            'order' => 0,
+            'passing_score' => $passingScore,
+        ]);
+
+        // Assert
+        $response->assertSessionDoesntHaveErrors();
+        $this->assertDatabaseHas('mock_exams', [
+            'certification_id' => $cert->id,
+            'passing_score' => $passingScore,
+        ]);
+    }
+
+    #[DataProvider('outOfRangePassingScores')]
+    public function test_passing_score_out_of_range_returns_between_message(int $passingScore): void
+    {
+        // Arrange
+        $admin = User::factory()->admin()->create();
+        $cert = Certification::factory()->published()->create();
+
+        // Act
+        $response = $this->actingAs($admin)->postJson(route('admin.mock-exams.store'), [
+            'certification_id' => $cert->id,
+            'title' => 'Sample',
+            'order' => 0,
+            'passing_score' => $passingScore,
+        ]);
+
+        // Assert
+        $response->assertStatus(422);
+        $response->assertJsonValidationErrors([
+            'passing_score' => '合格点(%) は 1 から 100 の間で指定してください。',
+        ]);
+        $this->assertDatabaseMissing('mock_exams', ['certification_id' => $cert->id]);
+    }
+
     public function test_authorize_returns_false_for_nonexistent_certification_id(): void
     {
         // Arrange: 実在しない ULID を渡す → authorize() が Certification::find で null を取得し false を返す
@@ -149,6 +195,29 @@ class StoreRequestTest extends TestCase
             'passing_score 0 で 422' => ['passing_score', 0],
             'passing_score 101 で 422' => ['passing_score', 101],
             'passing_score 非整数で 422' => ['passing_score', 'abc'],
+        ];
+    }
+
+    /**
+     * @return array<string, array{0: int}>
+     */
+    public static function validPassingScoreBoundaries(): array
+    {
+        return [
+            'passing_score 1 (下限) で保存できる' => [1],
+            'passing_score 100 (上限) で保存できる' => [100],
+        ];
+    }
+
+    /**
+     * @return array<string, array{0: int}>
+     */
+    public static function outOfRangePassingScores(): array
+    {
+        return [
+            'passing_score 0 で範囲エラー' => [0],
+            'passing_score 101 で範囲エラー' => [101],
+            'passing_score 150 で範囲エラー' => [150],
         ];
     }
 }

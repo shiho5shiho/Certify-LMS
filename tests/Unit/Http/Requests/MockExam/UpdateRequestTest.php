@@ -44,6 +44,19 @@ class UpdateRequestTest extends TestCase
         $this->assertArrayHasKey($field, $validator->errors()->toArray());
     }
 
+    #[DataProvider('validPassingScoreBoundaries')]
+    public function test_passes_with_passing_score_boundary(int $passingScore): void
+    {
+        // Arrange
+        $payload = ['title' => 'Sample', 'order' => 0, 'passing_score' => $passingScore];
+
+        // Act
+        $validator = Validator::make($payload, (new UpdateRequest)->rules());
+
+        // Assert
+        $this->assertTrue($validator->passes(), $validator->errors()->toJson());
+    }
+
     /**
      * @return array<string, array{0: string, 1: mixed}>
      */
@@ -57,6 +70,17 @@ class UpdateRequestTest extends TestCase
             'order 65536 で エラー' => ['order', 65536],
             'passing_score 0 で エラー' => ['passing_score', 0],
             'passing_score 101 で エラー' => ['passing_score', 101],
+        ];
+    }
+
+    /**
+     * @return array<string, array{0: int}>
+     */
+    public static function validPassingScoreBoundaries(): array
+    {
+        return [
+            'passing_score 1 (下限) で通る' => [1],
+            'passing_score 100 (上限) で通る' => [100],
         ];
     }
 }
