@@ -104,6 +104,24 @@ class CrudTest extends TestCase
         $this->assertSame($originalCertId, $mockExam->certification_id);
     }
 
+    public function test_update_rejects_passing_score_over_100(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $mockExam = MockExam::factory()->create(['passing_score' => 60]);
+
+        $this->actingAs($admin)
+            ->put(route('admin.mock-exams.update', $mockExam), [
+                'title' => '改題後',
+                'order' => 5,
+                'passing_score' => 101,
+            ])
+            ->assertSessionHasErrors([
+                'passing_score' => '合格点(%) は 1 から 100 の間で指定してください。',
+            ]);
+
+        $this->assertSame(60, $mockExam->refresh()->passing_score);
+    }
+
     public function test_destroy_rejects_published_mock_exam(): void
     {
         $admin = User::factory()->admin()->create();
