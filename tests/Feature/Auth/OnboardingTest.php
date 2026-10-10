@@ -13,6 +13,7 @@ use App\Models\Plan;
 use App\Models\User;
 use App\Services\InvitationTokenService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
@@ -338,5 +339,46 @@ class OnboardingTest extends TestCase
             'status' => UserStatus::InProgress->value,
             'meeting_url' => null,
         ]);
+    }
+
+    public function test_show_renders_invalid_view_after_onboarding_completed(): void
+    {
+        $invitation = $this->freshInvitation();
+
+        $this->post($this->postUrl($invitation), [
+            'name' => '受講太郎',
+            'password' => 'secret-pass',
+            'password_confirmation' => 'secret-pass',
+        ]);
+
+        // 同じ招待 URL に再アクセス
+        $response = $this->get($this->signedShowUrl($invitation));
+
+        $response->assertOk();
+        $response->assertViewIs('auth.invitation-invalid');
+    }
+
+    public function test_store_rejects_reuse_after_onboarding_completed(): void
+    {
+        $invitation = $this->freshInvitation();
+
+        $this->post($this->postUrl($invitation), [
+            'name' => '受講太郎',
+            'password' => 'secret-pass',
+            'password_confirmation' => 'secret-pass',
+        ]);
+
+        // 同じ招待で再登録(上書き)を試みる
+        $response = $this->post($this->postUrl($invitation), [
+            'name' => '上書き太郎',
+            'password' => 'other-pass',
+            'password_confirmation' => 'other-pass',
+        ]);
+
+        $response->assertStatus(410);
+
+        $user = $invitation->user->fresh();
+        $this->assertSame('受講太郎', $user->name);
+        $this->assertTrue(Hash::check('secret-pass', $user->password));
     }
 }

@@ -262,6 +262,23 @@ class OnboardActionTest extends TestCase
         ]);
     }
 
+    public function test_throws_when_onboarding_is_executed_twice(): void
+    {
+        [$invitation] = $this->setupInvitedUser();
+
+        app(OnboardAction::class)($invitation, [
+            'name' => '受講太郎',
+            'password' => 'secret-pass',
+        ]);
+
+        $this->expectException(InvalidInvitationTokenException::class);
+
+        app(OnboardAction::class)($invitation, [
+            'name' => '上書き太郎',
+            'password' => 'other-pass',
+        ]);
+    }
+
     public function test_throws_when_user_status_is_not_invited(): void
     {
         $plan = $this->plan();
