@@ -376,6 +376,7 @@ class OnboardingTest extends TestCase
         ]);
 
         $response->assertStatus(410);
+        $response->assertSee('招待リンクが無効または期限切れです。管理者へお問い合わせください。');
 
         $user = $invitation->user->fresh();
         $this->assertSame('受講太郎', $user->name);
