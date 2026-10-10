@@ -4,11 +4,11 @@
     例外のメッセージが渡されていればそれを、なければ既定の説明文を表示する。静的表示のみ。
 --}}
 @php
-$customMessage = isset($exception) ? trim($exception->getMessage()) : '';
+    $customMessage = isset($exception) ? trim($exception->getMessage()) : '';
 @endphp
 
 @include('errors._layout', [
-'code' => '410',
-'heading' => '招待リンクが無効または期限切れです',
-'description' => $customMessage !== '' ? $customMessage : '招待リンクが無効または期限切れです。管理者へお問い合わせください。',
+    'code' => '410',
+    'heading' => '招待リンクが無効または期限切れです',
+    'description' => $customMessage !== '' ? $customMessage : '招待リンクが無効または期限切れです。管理者へお問い合わせください。',
 ])
