@@ -28,6 +28,11 @@ final class StartLearningSession
     {
         $response = $next($request);
 
+        // 閲覧に成功した(2xx)ときだけ学習セッションを開始する。403 / 404 では開始しない。
+        if (! $response->isSuccessful()) {
+            return $response;
+        }
+
         $section = $request->route('section');
         $user = $request->user();
 
