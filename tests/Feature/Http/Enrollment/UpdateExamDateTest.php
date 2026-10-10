@@ -40,6 +40,29 @@ class UpdateExamDateTest extends TestCase
         ]);
     }
 
+    public function test_student_can_change_existing_exam_date(): void
+    {
+        // Arrange
+        $student = User::factory()->student()->inProgress()->create();
+        $cert = Certification::factory()->published()->create();
+        $enrollment = Enrollment::factory()->for($student)->for($cert)->learning()->create([
+            'exam_date' => now()->addDays(30)->toDateString(),
+        ]);
+        $newExamDate = now()->addDays(60)->toDateString();
+
+        // Act(from() を付けず、直前の画面に頼らず詳細画面へ戻ることを確認する)
+        $response = $this->actingAs($student)
+            ->patch(route('enrollments.updateExamDate', $enrollment), ['exam_date' => $newExamDate]);
+
+        // Assert
+        $response->assertRedirect(route('enrollments.show', $enrollment));
+        $response->assertSessionHas('success', '目標受験日を更新しました。');
+        $this->assertDatabaseHas('enrollments', [
+            'id' => $enrollment->id,
+            'exam_date' => $newExamDate,
+        ]);
+    }
+
     public function test_other_student_cannot_update_exam_date(): void
     {
         // Arrange
