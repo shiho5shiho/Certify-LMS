@@ -145,6 +145,25 @@ class BrowseControllerTest extends TestCase
         ]);
     }
 
+    public function test_show_section_does_not_start_learning_session_for_failed_enrollment(): void
+    {
+        [$student, $certification, $section] = $this->buildSectionFor(EnrollmentStatus::Failed);
+
+        $this->actingAs($student)->get(route('learning.sections.show', $section))->assertForbidden();
+
+        $this->assertDatabaseCount('learning_sessions', 0);
+    }
+
+    public function test_show_section_does_not_start_learning_session_when_section_is_draft(): void
+    {
+        [$student, $certification, $section] = $this->buildSectionFor(EnrollmentStatus::Learning);
+        $section->update(['status' => ContentStatus::Draft->value]);
+
+        $this->actingAs($student)->get(route('learning.sections.show', $section))->assertNotFound();
+
+        $this->assertDatabaseCount('learning_sessions', 0);
+    }
+
     public function test_show_section_for_passed_enrollment_succeeds(): void
     {
         [$student, $certification, $section] = $this->buildSectionFor(EnrollmentStatus::Passed);
