@@ -159,6 +159,62 @@ class BrowseControllerTest extends TestCase
         $this->actingAs($student)->get(route('learning.sections.show', $section))->assertForbidden();
     }
 
+    public function test_show_part_allows_learning_enrollment(): void
+    {
+        [$student, $certification, $section] = $this->buildSectionFor(EnrollmentStatus::Learning);
+
+        $this->actingAs($student)->get(route('learning.parts.show', $section->chapter->part))->assertOk();
+    }
+
+    public function test_show_part_for_failed_enrollment_returns_403(): void
+    {
+        [$student, $certification, $section] = $this->buildSectionFor(EnrollmentStatus::Failed);
+
+        $this->actingAs($student)->get(route('learning.parts.show', $section->chapter->part))->assertForbidden();
+    }
+
+    public function test_show_published_part_forbidden_for_non_enrolled_student(): void
+    {
+        [$student, $section] = $this->buildSectionForNonEnrolledStudent();
+
+        $this->actingAs($student)->get(route('learning.parts.show', $section->chapter->part))->assertForbidden();
+    }
+
+    public function test_show_chapter_allows_learning_enrollment(): void
+    {
+        [$student, $certification, $section] = $this->buildSectionFor(EnrollmentStatus::Learning);
+
+        $this->actingAs($student)->get(route('learning.chapters.show', $section->chapter))->assertOk();
+    }
+
+    public function test_show_chapter_allows_passed_enrollment(): void
+    {
+        [$student, $certification, $section] = $this->buildSectionFor(EnrollmentStatus::Passed);
+
+        $this->actingAs($student)->get(route('learning.chapters.show', $section->chapter))->assertOk();
+    }
+
+    public function test_show_chapter_for_failed_enrollment_returns_403(): void
+    {
+        [$student, $certification, $section] = $this->buildSectionFor(EnrollmentStatus::Failed);
+
+        $this->actingAs($student)->get(route('learning.chapters.show', $section->chapter))->assertForbidden();
+    }
+
+    public function test_show_chapter_forbidden_for_non_enrolled_student(): void
+    {
+        [$student, $section] = $this->buildSectionForNonEnrolledStudent();
+
+        $this->actingAs($student)->get(route('learning.chapters.show', $section->chapter))->assertForbidden();
+    }
+
+    public function test_show_section_forbidden_for_non_enrolled_student(): void
+    {
+        [$student, $section] = $this->buildSectionForNonEnrolledStudent();
+
+        $this->actingAs($student)->get(route('learning.sections.show', $section))->assertForbidden();
+    }
+
     public function test_show_part_404_when_certification_archived(): void
     {
         [$student, $part] = $this->buildArchivedCertificationPart();
@@ -324,5 +380,24 @@ class BrowseControllerTest extends TestCase
         $part = Part::factory()->for($certification)->create(['status' => ContentStatus::Published->value]);
 
         return [$student, $part];
+    }
+
+    /**
+     * 資格・教材はすべて公開済みだが、受講生がその資格に受講登録していないシナリオ。
+     *
+     * @return array{0: User, 1: Section}
+     */
+    private function buildSectionForNonEnrolledStudent(): array
+    {
+        $student = User::factory()->student()->inProgress()->create();
+        $certification = Certification::factory()->published()->create();
+        $part = Part::factory()->for($certification)->create(['status' => ContentStatus::Published->value]);
+        $chapter = Chapter::factory()->for($part)->create(['status' => ContentStatus::Published->value]);
+        $section = Section::factory()->for($chapter)->create([
+            'status' => ContentStatus::Published->value,
+            'body' => '# テスト本文',
+        ]);
+
+        return [$student, $section];
     }
 }
