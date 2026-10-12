@@ -9,6 +9,8 @@ use App\Models\ChatMember;
 use App\Models\ChatMessage;
 use App\Models\ChatRoom;
 use App\Models\User;
+use App\Notifications\Chat\ChatMessageReceivedNotification;
+use App\Services\NotificationDispatchService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,6 +23,10 @@ use Illuminate\Support\Facades\DB;
  */
 final class StoreMessageAction
 {
+    public function __construct(
+        private readonly NotificationDispatchService $notifier,
+    ) {}
+
     /**
      * @param array{body: string} $validated
      */
@@ -38,8 +44,15 @@ final class StoreMessageAction
                 ->where('user_id', $sender->id)
                 ->update(['last_read_at' => now()]);
 
-            DB::afterCommit(function () use ($message): void {
+            DB::afterCommit(function () use ($message, $room, $sender): void {
                 broadcast(new ChatMessageSent($message->load('sender')))->toOthers();
+
+                $room->loadMissing('members.user');
+                $this->notifier->send(
+                    $room->members->pluck('user'),
+                    $sender,
+                    new ChatMessageReceivedNotification($message),
+                );
             });
 
             return $message;
