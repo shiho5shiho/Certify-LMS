@@ -18,13 +18,19 @@ use Illuminate\View\View;
  */
 class NotificationController extends Controller
 {
-    public function index(IndexRequest $request, IndexAction $action): View
+    public function index(IndexRequest $request, IndexAction $action): View|RedirectResponse
     {
         $user = $request->user();
         $tab = $request->validated('tab') ?? 'all';
+        $notifications = $action($user, $tab);
+
+        // タブ切替でページ番号が引き継がれ範囲外になった場合は、同じタブの 1 ページ目に戻す
+        if ($notifications->isEmpty() && $notifications->currentPage() > 1) {
+            return redirect()->route('notifications.index', ['tab' => $tab]);
+        }
 
         return view('notifications.index', [
-            'notifications' => $action($user, $tab),
+            'notifications' => $notifications,
             'unreadCount' => $user->unreadNotifications()->count(),
             'tab' => $tab,
         ]);
