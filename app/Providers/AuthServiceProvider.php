@@ -46,6 +46,7 @@ use App\Policies\MeetingQuotaPolicy;
 use App\Policies\MockExamPolicy;
 use App\Policies\MockExamQuestionPolicy;
 use App\Policies\MockExamSessionPolicy;
+use App\Policies\NotificationPolicy;
 use App\Policies\PartPolicy;
 use App\Policies\PartViewPolicy;
 use App\Policies\PlanPolicy;
@@ -63,6 +64,7 @@ use App\Policies\SectionViewPolicy;
 use App\Policies\UserPolicy;
 use App\Policies\WeakDrillPolicy;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
@@ -99,6 +101,7 @@ class AuthServiceProvider extends ServiceProvider
         QaReply::class => QaReplyPolicy::class,
         MeetingPack::class => MeetingPackPolicy::class,
         Plan::class => PlanPolicy::class,
+        DatabaseNotification::class => NotificationPolicy::class,
     ];
 
     /**
