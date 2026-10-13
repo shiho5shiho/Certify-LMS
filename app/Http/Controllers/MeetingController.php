@@ -20,9 +20,12 @@ use App\Models\Enrollment;
 use App\Models\Meeting;
 use App\Models\MeetingMemo;
 use App\Models\User;
+use App\Notifications\Meeting\MeetingCanceledNotification;
+use App\Notifications\Meeting\MeetingReservedNotification;
 use App\Services\CoachMeetingLoadService;
 use App\Services\MeetingAvailabilityService;
 use App\Services\MeetingQuotaService;
+use App\Services\NotificationDispatchService;
 use App\UseCases\MeetingQuota\ConsumeQuotaAction;
 use App\UseCases\MeetingQuota\RefundQuotaAction;
 use Carbon\Carbon;
@@ -167,6 +170,7 @@ class MeetingController extends Controller
         CoachMeetingLoadService $coachLoadService,
         MeetingQuotaService $quotaService,
         ConsumeQuotaAction $consumeAction,
+        NotificationDispatchService $notifier,
     ): RedirectResponse {
         $scheduledAt = Carbon::parse($request->validated('scheduled_at'));
         $topic = $request->validated('topic');
@@ -216,6 +220,9 @@ class MeetingController extends Controller
             return $meeting->fresh();
         });
 
+        $meeting->load(['coach', 'student', 'enrollment.certification']);
+        $notifier->send([$meeting->coach], $student, new MeetingReservedNotification($meeting));
+
         return redirect()
             ->route('meetings.show', $meeting)
             ->with('success', '面談を予約しました。');
@@ -228,6 +235,7 @@ class MeetingController extends Controller
     public function cancel(
         Meeting $meeting,
         RefundQuotaAction $refundAction,
+        NotificationDispatchService $notifier,
     ): RedirectResponse {
         $this->authorize('cancel', $meeting);
 
@@ -249,6 +257,14 @@ class MeetingController extends Controller
                 'canceled_at' => now(),
             ]);
         });
+
+        $meeting->refresh()->load(['coach', 'student', 'enrollment.certification']);
+        // 面談キャンセルは例外として、担当解除後でもその面談のコーチに通知する(PM 確認済み)
+        $notifier->send(
+            [$meeting->coach, $meeting->student],
+            $actor,
+            new MeetingCanceledNotification($meeting, $actor),
+        );
 
         return redirect()
             ->route('meetings.show', $meeting)
