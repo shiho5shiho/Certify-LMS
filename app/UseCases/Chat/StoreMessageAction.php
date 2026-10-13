@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\UseCases\Chat;
 
+use App\Enums\UserRole;
 use App\Events\ChatMessageSent;
 use App\Models\ChatMember;
 use App\Models\ChatMessage;
@@ -47,9 +48,16 @@ final class StoreMessageAction
             DB::afterCommit(function () use ($message, $room, $sender): void {
                 broadcast(new ChatMessageSent($message->load('sender')))->toOthers();
 
-                $room->loadMissing('members.user');
+                // コーチは現在の担当コーチのみに送る(担当解除後も ChatMember には残るため、担当割当で絞る)
+                $room->loadMissing(['members.user', 'enrollment.certification.coaches']);
+                $assignedCoachIds = $room->enrollment->certification->coaches->pluck('id');
+                $candidates = $room->members
+                    ->pluck('user')
+                    ->filter(fn (?User $user) => $user !== null
+                        && ($user->role !== UserRole::Coach || $assignedCoachIds->contains($user->id)));
+
                 $this->notifier->send(
-                    $room->members->pluck('user'),
+                    $candidates,
                     $sender,
                     new ChatMessageReceivedNotification($message),
                 );

@@ -208,4 +208,38 @@ class DispatchTest extends TestCase
         );
         Notification::assertNotSentTo($coach, MeetingCanceledNotification::class);
     }
+
+    public function test_chat_message_does_not_notify_unassigned_coach(): void
+    {
+        $student = User::factory()->student()->inProgress()->create();
+        $assignedCoach = User::factory()->coach()->inProgress()->create();
+        $unassignedCoach = User::factory()->coach()->inProgress()->create();
+        $certification = Certification::factory()->published()->create();
+        $this->attachCoach($certification, $assignedCoach);
+        $this->attachCoach($certification, $unassignedCoach, unassignedAt: now()->subDay());
+        $enrollment = Enrollment::factory()->for($student)->for($certification)->create();
+        $room = ChatRoom::factory()->for($enrollment)->create();
+        foreach ([$student, $assignedCoach, $unassignedCoach] as $member) {
+            ChatMember::factory()->create(['chat_room_id' => $room->id, 'user_id' => $member->id]);
+        }
+
+        $this->actingAs($student)->post(route('chat.storeMessage', $room), ['body' => '相談したいです。']);
+
+        Notification::assertSentTo($assignedCoach, ChatMessageReceivedNotification::class);
+        Notification::assertNotSentTo($unassignedCoach, ChatMessageReceivedNotification::class);
+    }
+
+    public function test_meeting_cancel_notifies_coach_even_after_unassigned(): void
+    {
+        $student = User::factory()->student()->inProgress()->create();
+        $coach = User::factory()->coach()->inProgress()->create();
+        $certification = Certification::factory()->published()->create();
+        $this->attachCoach($certification, $coach, unassignedAt: now()->subDay());
+        $enrollment = Enrollment::factory()->for($student, 'user')->for($certification)->learning()->create();
+        $meeting = Meeting::factory()->reserved()->forCoach($coach)->forStudent($student)->forEnrollment($enrollment)->create();
+
+        $this->actingAs($student)->post(route('meetings.cancel', $meeting));
+
+        Notification::assertSentTo($coach, MeetingCanceledNotification::class);
+    }
 }
