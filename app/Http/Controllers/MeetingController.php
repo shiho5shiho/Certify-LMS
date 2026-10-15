@@ -256,7 +256,7 @@ class MeetingController extends Controller
                 'canceled_by_user_id' => $actor->id,
                 'canceled_at' => now(),
             ]);
-
+            // 消費済の面談回数 1 回分を、操作者ではなく面談の受講生に返却する
             ($refundAction)($locked->student, $locked->id);
         });
 
