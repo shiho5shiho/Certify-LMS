@@ -12,6 +12,7 @@ use App\Enums\UserStatus;
 use App\Models\Certificate;
 use App\Models\Certification;
 use App\Models\Enrollment;
+use App\Models\EnrollmentGoal;
 use App\Models\EnrollmentStatusLog;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
@@ -142,6 +143,9 @@ final class EnrollmentSeeder extends Seeder
                     'passed_at' => null,
                 ],
             );
+            if ($index === 0) {
+                $this->seedFixedStudentGoals($enrollment);
+            }
 
             EnrollmentStatusLog::firstOrCreate(
                 ['enrollment_id' => $enrollment->id, 'to_status' => EnrollmentStatus::Learning->value],
@@ -202,9 +206,56 @@ final class EnrollmentSeeder extends Seeder
 
             $this->seedStatusLogs($enrollment, $pattern['state'], $student);
 
+            $this->seedDemoGoals($enrollment, $i);
+
             if ($pattern['state'] === 'passed') {
                 $this->issueCertificate($enrollment, $passedAt);
             }
+        }
+    }
+
+    /**
+     * 固定 student の 1 件目の Enrollment に、達成済 / 未達成の個人目標を 1 件ずつ投入する。
+     * 視覚区別・達成マーク / 解除・編集・削除をすぐ確認できるようにするため。
+     * 再実行しても重複しないよう、タイトルをキーに firstOrCreate する。
+     */
+    private function seedFixedStudentGoals(Enrollment $enrollment): void
+    {
+        EnrollmentGoal::firstOrCreate(
+            ['enrollment_id' => $enrollment->id, 'title' => '過去問 1 年分を解き終える'],
+            [
+                'description' => '午前・午後の両方を時間を計って解く。',
+                'target_date' => now()->subDays(3)->toDateString(),
+                'achieved_at' => now()->subDays(5),
+            ],
+        );
+
+        EnrollmentGoal::firstOrCreate(
+            ['enrollment_id' => $enrollment->id, 'title' => '模試で合格点を超える'],
+            [
+                'description' => null,
+                'target_date' => now()->addDays(14)->toDateString(),
+                'achieved_at' => null,
+            ],
+        );
+    }
+
+    /**
+     * demo 受講生の Enrollment に個人目標を散らす(コーチ / 管理者 / 他受講生からの閲覧の認可分岐確認用)。
+     * 偶数番目の受講生には達成済の目標も加え、達成 / 未達成が混在するようにする。
+     */
+    private function seedDemoGoals(Enrollment $enrollment, int $index): void
+    {
+        EnrollmentGoal::factory()->forEnrollment($enrollment)->create([
+            'title' => '苦手分野の章を復習する',
+            'target_date' => now()->addDays(7 + $index)->toDateString(),
+        ]);
+
+        if ($index % 2 === 0) {
+            EnrollmentGoal::factory()->forEnrollment($enrollment)->achieved()->create([
+                'title' => '教材の第 1 章を読み終える',
+                'target_date' => now()->subDays(10)->toDateString(),
+            ]);
         }
     }
 
