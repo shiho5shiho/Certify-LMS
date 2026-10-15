@@ -10,7 +10,9 @@ use App\Models\Certification;
 use App\Models\CoachAvailability;
 use App\Models\Enrollment;
 use App\Models\Meeting;
+use App\Models\MeetingQuotaTransaction;
 use App\Models\User;
+use App\Services\MeetingQuotaService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -314,6 +316,94 @@ class MeetingControllerTest extends TestCase
             'related_meeting_id' => $meeting->id,
             'type' => MeetingQuotaTransactionType::Refunded->value,
             'amount' => 1,
+        ]);
+    }
+
+    public function test_cancel_by_coach_refunds_meeting_quota_to_student(): void
+    {
+        // Arrange: 予約済面談 1 件。コーチがキャンセルする
+        $student = User::factory()->student()->inProgress()->create(['max_meetings' => 5]);
+        $coach = User::factory()->coach()->create();
+        $meeting = Meeting::factory()->reserved()->forCoach($coach)->forStudent($student)->create([
+            'scheduled_at' => now()->addDays(3)->startOfHour(),
+        ]);
+
+        // Act
+        $response = $this->actingAs($coach)->post(route('meetings.cancel', $meeting));
+
+        // Assert: 返却先は操作したコーチではなく、面談の受講生
+        $response->assertRedirect();
+        $this->assertDatabaseHas('meeting_quota_transactions', [
+            'user_id' => $student->id,
+            'related_meeting_id' => $meeting->id,
+            'type' => MeetingQuotaTransactionType::Refunded->value,
+            'amount' => 1,
+        ]);
+        $this->assertDatabaseMissing('meeting_quota_transactions', [
+            'user_id' => $coach->id,
+            'type' => MeetingQuotaTransactionType::Refunded->value,
+        ]);
+    }
+
+    public function test_cancel_restores_remaining_quota_by_one(): void
+    {
+        // Arrange: 予約時の消費記録(consumed -1)がある状態を作る
+        $student = User::factory()->student()->inProgress()->create(['max_meetings' => 5]);
+        $coach = User::factory()->coach()->create();
+        $meeting = Meeting::factory()->reserved()->forCoach($coach)->forStudent($student)->create([
+            'scheduled_at' => now()->addDays(3)->startOfHour(),
+        ]);
+        MeetingQuotaTransaction::factory()->consumed($meeting->id)->create(['user_id' => $student->id]);
+
+        $quotaService = app(MeetingQuotaService::class);
+        $before = $quotaService->remaining($student);
+
+        // Act
+        $this->actingAs($student)->post(route('meetings.cancel', $meeting));
+
+        // Assert: キャンセル後の残数 = キャンセル前 + 1
+        $this->assertSame($before + 1, $quotaService->remaining($student));
+    }
+
+    public function test_cancel_does_not_refund_when_meeting_already_started(): void
+    {
+        // Arrange: 開始時刻を過ぎた予約済面談
+        $student = User::factory()->student()->inProgress()->create(['max_meetings' => 5]);
+        $coach = User::factory()->coach()->create();
+        $meeting = Meeting::factory()->reserved()->forCoach($coach)->forStudent($student)->create([
+            'scheduled_at' => now()->subHour()->startOfHour(),
+        ]);
+
+        // Act
+        $response = $this->actingAs($student)->post(route('meetings.cancel', $meeting));
+
+        // Assert: キャンセルされず、返却記録も作られない
+        $response->assertRedirect();
+        $response->assertSessionHas('error', '面談開始時刻を過ぎた予約はキャンセルできません。');
+        $this->assertSame(MeetingStatus::Reserved, $meeting->fresh()->status);
+        $this->assertDatabaseMissing('meeting_quota_transactions', [
+            'related_meeting_id' => $meeting->id,
+            'type' => MeetingQuotaTransactionType::Refunded->value,
+        ]);
+    }
+
+    public function test_cancel_does_not_refund_when_meeting_already_canceled(): void
+    {
+        // Arrange: キャンセル済の面談
+        $student = User::factory()->student()->inProgress()->create(['max_meetings' => 5]);
+        $coach = User::factory()->coach()->create();
+        $meeting = Meeting::factory()->canceled()->forCoach($coach)->forStudent($student)->create([
+            'scheduled_at' => now()->addDays(3)->startOfHour(),
+        ]);
+
+        // Act
+        $response = $this->actingAs($student)->post(route('meetings.cancel', $meeting));
+
+        // Assert: 二重キャンセルは拒否され、返却記録も作られない(二重返却の防止)
+        $response->assertForbidden();
+        $this->assertDatabaseMissing('meeting_quota_transactions', [
+            'related_meeting_id' => $meeting->id,
+            'type' => MeetingQuotaTransactionType::Refunded->value,
         ]);
     }
 }
