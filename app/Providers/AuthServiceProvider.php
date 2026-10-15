@@ -10,6 +10,7 @@ use App\Models\Chapter;
 use App\Models\ChatRoom;
 use App\Models\CoachAvailability;
 use App\Models\Enrollment;
+use App\Models\EnrollmentGoal;
 use App\Models\Invitation;
 use App\Models\LearningHourTarget;
 use App\Models\LearningSession;
@@ -36,6 +37,7 @@ use App\Policies\ChapterPolicy;
 use App\Policies\ChapterViewPolicy;
 use App\Policies\ChatRoomPolicy;
 use App\Policies\CoachAvailabilityPolicy;
+use App\Policies\EnrollmentGoalPolicy;
 use App\Policies\EnrollmentPolicy;
 use App\Policies\InvitationPolicy;
 use App\Policies\LearningHourTargetPolicy;
@@ -102,6 +104,7 @@ class AuthServiceProvider extends ServiceProvider
         MeetingPack::class => MeetingPackPolicy::class,
         Plan::class => PlanPolicy::class,
         DatabaseNotification::class => NotificationPolicy::class,
+        EnrollmentGoal::class => EnrollmentGoalPolicy::class,
     ];
 
     /**
