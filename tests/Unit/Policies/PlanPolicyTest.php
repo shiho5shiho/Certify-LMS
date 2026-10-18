@@ -39,7 +39,7 @@ class PlanPolicyTest extends TestCase
         $this->assertSame(
             $expected,
             $result,
-            "{$actingRole} が {$policyMethod} で " . ($expected ? 'true' : 'false') . ' を返すはず',
+            "{$actingRole} が {$policyMethod} で ".($expected ? 'true' : 'false').' を返すはず',
         );
     }
 

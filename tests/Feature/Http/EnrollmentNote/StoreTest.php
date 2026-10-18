@@ -121,7 +121,7 @@ class StoreTest extends TestCase
         $this->assertDatabaseCount('enrollment_notes', 0);
     }
 
-        public function test_body_accepts_2000_chars_and_rejects_2001_chars(): void
+    public function test_body_accepts_2000_chars_and_rejects_2001_chars(): void
     {
         // Arrange
         $admin = User::factory()->admin()->create();

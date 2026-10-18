@@ -384,52 +384,52 @@ class OnboardingTest extends TestCase
     }
 
     public function test_student_can_relogin_and_use_plan_features_after_onboarding(): void
-{
-    $invitation = $this->freshInvitation();
+    {
+        $invitation = $this->freshInvitation();
 
-    $this->post($this->postUrl($invitation), [
-        'name' => '受講太郎',
-        'password' => 'secret-pass',
-        'password_confirmation' => 'secret-pass',
-    ]);
+        $this->post($this->postUrl($invitation), [
+            'name' => '受講太郎',
+            'password' => 'secret-pass',
+            'password_confirmation' => 'secret-pass',
+        ]);
 
-    // 一度ログアウトする
-    $this->post('/logout');
-    $this->assertGuest();
+        // 一度ログアウトする
+        $this->post('/logout');
+        $this->assertGuest();
 
-    // 設定したメールアドレス・パスワードで再ログインできる
-    $response = $this->post('/login', [
-        'email' => $invitation->email,
-        'password' => 'secret-pass',
-    ]);
+        // 設定したメールアドレス・パスワードで再ログインできる
+        $response = $this->post('/login', [
+            'email' => $invitation->email,
+            'password' => 'secret-pass',
+        ]);
 
-    $response->assertRedirect(config('fortify.home'));
-    $this->assertAuthenticatedAs($invitation->user);
+        $response->assertRedirect(config('fortify.home'));
+        $this->assertAuthenticatedAs($invitation->user);
 
-    // プラン機能(active-learning 配下)にアクセスできる
-    $this->get(route('certifications.index'))->assertOk();
-}
+        // プラン機能(active-learning 配下)にアクセスできる
+        $this->get(route('certifications.index'))->assertOk();
+    }
 
-public function test_coach_can_relogin_after_onboarding(): void
-{
-    $invitation = $this->freshInvitation(UserRole::Coach);
+    public function test_coach_can_relogin_after_onboarding(): void
+    {
+        $invitation = $this->freshInvitation(UserRole::Coach);
 
-    $this->post($this->postUrl($invitation), [
-        'name' => 'コーチ花子',
-        'password' => 'secret-pass',
-        'password_confirmation' => 'secret-pass',
-        'meeting_url' => 'https://meet.example.com/coach',
-    ]);
+        $this->post($this->postUrl($invitation), [
+            'name' => 'コーチ花子',
+            'password' => 'secret-pass',
+            'password_confirmation' => 'secret-pass',
+            'meeting_url' => 'https://meet.example.com/coach',
+        ]);
 
-    $this->post('/logout');
-    $this->assertGuest();
+        $this->post('/logout');
+        $this->assertGuest();
 
-    $response = $this->post('/login', [
-        'email' => $invitation->email,
-        'password' => 'secret-pass',
-    ]);
+        $response = $this->post('/login', [
+            'email' => $invitation->email,
+            'password' => 'secret-pass',
+        ]);
 
-    $response->assertRedirect(config('fortify.home'));
-    $this->assertAuthenticatedAs($invitation->user);
-}
+        $response->assertRedirect(config('fortify.home'));
+        $this->assertAuthenticatedAs($invitation->user);
+    }
 }
