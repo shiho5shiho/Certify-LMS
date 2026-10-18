@@ -10,6 +10,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\CoachAvailability;
 use App\Models\Enrollment;
+use App\Models\EnrollmentNote;
 use App\Models\Meeting;
 use App\Models\MeetingMemo;
 use App\Models\MeetingQuotaTransaction;
@@ -27,6 +28,8 @@ use Illuminate\Database\Seeder;
  * - **Meeting 状態網羅**: 履歴 UI の各ステータスバッジ・フィルタ・状態遷移ボタンが見える状態を作る。
  *   reserved(今後数日) / completed(過去、メモあり) / canceled(refund 流れ済) の 3 状態を散らす。
  * - **固定 student に最低 1 件ずつ**: 動作確認・スクショ撮影で安定して参照できるよう reserved × 1 / completed × 1 を確実に作る。
+ * - **受講生メモ(EnrollmentNote)**: 固定受講生の全受講登録とデモ受講生の一部に、担当コーチ全員と admin のメモを混ぜて入れる。
+ *   自分 / 他コーチのメモの出し分け、担当外コーチの閲覧拒否、受講生本人に見えないことを確認するため。
  *
  * 依存: UserSeeder → CertificationSeeder → EnrollmentSeeder の後に走る前提
  * (`certification_coach_assignments` と `enrollments` を参照する)。
@@ -39,6 +42,7 @@ final class MentoringSeeder extends Seeder
         $this->seedFixedStudentMeetings();
         $this->seedNoQuotaStudentMeetings();
         $this->seedDemoMeetings();
+        $this->seedEnrollmentNotes();
     }
 
     /**
@@ -255,6 +259,53 @@ final class MentoringSeeder extends Seeder
 
                 $this->insertConsumedTransaction($enrollment->user, $canceled, occurredAt: $canceledAt->copy()->subDays(2));
                 $this->insertRefundedTransaction($enrollment->user, $canceled);
+            }
+        }
+    }
+
+    /**
+     * 受講生メモを投入する。固定受講生の全受講登録 + デモ受講生の受講登録 3 件に、
+     * 担当コーチ全員分のメモを入れ、先頭の受講登録には admin のメモも混ぜる。
+     * (自分 / 他コーチのメモの出し分け、担当外コーチの閲覧拒否、受講生本人に見えないことを確認するため)
+     */
+    private function seedEnrollmentNotes(): void
+    {
+        $admin = User::query()->where('email', 'admin@certify-lms.test')->first();
+        $student = User::query()->where('email', 'student@certify-lms.test')->first();
+
+        if ($student === null) {
+            return;
+        }
+
+        $enrollments = Enrollment::query()
+            ->with('certification.coaches')
+            ->where('user_id', $student->id)
+            ->get()
+            ->merge(
+                Enrollment::query()
+                    ->with('certification.coaches')
+                    ->where('user_id', '!=', $student->id)
+                    ->limit(3)
+                    ->get()
+            );
+
+        foreach ($enrollments->values() as $index => $enrollment) {
+            foreach ($enrollment->certification->coaches as $coach) {
+                EnrollmentNote::factory()
+                    ->forEnrollment($enrollment)
+                    ->byAuthor($coach)
+                    ->create([
+                        'body' => "Q&A で質問が多かった論点を次回面談で確認する。（{$coach->name}）",
+                    ]);
+            }
+
+            if ($admin !== null && $index === 0) {
+                EnrollmentNote::factory()
+                    ->forEnrollment($enrollment)
+                    ->byAuthor($admin)
+                    ->create([
+                        'body' => '運営メモ: 受験日の変更希望あり。担当コーチと共有済み。',
+                    ]);
             }
         }
     }
