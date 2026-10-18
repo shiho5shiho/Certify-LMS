@@ -108,7 +108,7 @@ class UpdateTest extends TestCase
         $this->assertSame('元の本文', $note->refresh()->body);
     }
 
-        public function test_update_validates_body(): void
+    public function test_update_validates_body(): void
     {
         // Arrange
         $admin = User::factory()->admin()->create();
