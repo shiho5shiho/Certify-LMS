@@ -30,7 +30,7 @@ class UpdateRequest extends FormRequest
         ];
 
         if ($this->user()?->role === UserRole::Coach) {
-            // ⚠️ PM Q1 の回答で「空欄可」になったら 'required' → 'nullable' に変える
+            // 招待時(OnboardingRequest)と同じ条件。空欄での保存は不可(PM 確認済)
             $rules['meeting_url'] = ['required', 'string', 'url', 'max:500'];
         }
 
