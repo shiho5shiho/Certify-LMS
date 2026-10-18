@@ -43,6 +43,9 @@ use App\Http\Controllers\SectionQuestionController;
 use App\Http\Controllers\SectionQuizController;
 use App\Http\Controllers\SectionQuizResultController;
 use App\Http\Controllers\Settings\AvailabilityController as SettingsAvailabilityController;
+use App\Http\Controllers\Settings\AvatarController as SettingsAvatarController;
+use App\Http\Controllers\Settings\PasswordController as SettingsPasswordController;
+use App\Http\Controllers\Settings\ProfileController as SettingsProfileController;
 use App\Http\Controllers\Settings\SettingsDefaultEnrollmentController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeakDrillController;
@@ -84,6 +87,21 @@ Route::middleware('auth')->group(function () {
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
     Route::post('notifications/{notification}/read', [NotificationController::class, 'markAsRead'])->name('notifications.markAsRead');
 });
+
+// ============================================================
+// 全ロール共通 設定ルート(プロフィール / アイコン画像 / パスワード)
+// 修了済受講生も利用するため active-learning は付けない
+// ============================================================
+Route::middleware('auth')
+    ->prefix('settings')
+    ->name('settings.')
+    ->group(function () {
+        Route::get('profile', [SettingsProfileController::class, 'edit'])->name('profile.edit');
+        Route::patch('profile', [SettingsProfileController::class, 'update'])->name('profile.update');
+        Route::post('avatar', [SettingsAvatarController::class, 'store'])->name('avatar.store');
+        Route::delete('avatar', [SettingsAvatarController::class, 'destroy'])->name('avatar.destroy');
+        Route::put('password', [SettingsPasswordController::class, 'update'])->name('password.update');
+    });
 
 // ============================================================
 // 受講生専用ルート(受講中ステータスのみ通過、卒業ステータスはロック)
