@@ -24,8 +24,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * で参照する。修了は受講生「修了証を受け取る」自己発火で即時 passed 遷移し、admin 承認フローは持たない。
  *
  * 関連: User(受講生) / Certification / Certificate(発行済修了証) / EnrollmentStatusLog / MockExamSession
- *       / ChatRoom(受講登録ごとの chat ルーム) / SectionProgress / LearningSession / LearningHourTarget(学習時間目標)
- *       / EnrollmentGoal(個人学習目標) / EnrollmentNote(コーチメモ)
  * 逆リレーション: defaultedByUser(受講生がデフォルト資格として指している場合のみ存在)
  * scope: learning() / passed() / failed() / forUser(User)(admin = 全件 / coach = 担当資格の Enrollment / student = 自分の Enrollment)
  */

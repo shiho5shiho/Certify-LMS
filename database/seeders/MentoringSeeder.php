@@ -18,7 +18,7 @@ use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 /**
- *  mentoring Feature（面談予約・受講生メモ）のデモデータシーダー。
+ * 面談予約 Feature のデモデータシーダー。
  *
  * **設計思想**:
  *
