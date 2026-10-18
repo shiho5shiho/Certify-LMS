@@ -266,7 +266,9 @@ class OnboardingTest extends TestCase
             'password_confirmation' => 'different-pass',
         ]);
 
-        $response->assertSessionHasErrors('password');
+        $response->assertSessionHasErrors([
+            'password' => 'パスワード と確認用の入力が一致しません。',
+        ]);
         $this->assertDatabaseHas('users', [
             'id' => $invitation->user_id,
             'status' => UserStatus::Invited->value,
