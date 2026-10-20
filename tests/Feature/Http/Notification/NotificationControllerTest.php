@@ -149,4 +149,31 @@ class NotificationControllerTest extends TestCase
         $this->assertSame(0, $user->unreadNotifications()->count());
         $this->assertNull($othersNotification->fresh()->read_at);
     }
+
+    public function test_show_displays_own_notification_and_marks_it_as_read(): void
+    {
+        $user = User::factory()->student()->inProgress()->create();
+        $notification = $this->createNotification($user);
+
+        $this->actingAs($user)
+            ->get(route('notifications.show', $notification))
+            ->assertOk()
+            ->assertSee('テスト通知')
+            ->assertSee('テスト本文');
+
+        $this->assertNotNull($notification->fresh()->read_at);
+    }
+
+    public function test_show_is_forbidden_for_others_notification(): void
+    {
+        $owner = User::factory()->student()->inProgress()->create();
+        $other = User::factory()->student()->inProgress()->create();
+        $notification = $this->createNotification($owner);
+
+        $this->actingAs($other)
+            ->get(route('notifications.show', $notification))
+            ->assertForbidden();
+
+        $this->assertNull($notification->fresh()->read_at);
+    }
 }
