@@ -36,6 +36,21 @@ class NotificationController extends Controller
         ]);
     }
 
+    /**
+     * 通知詳細(運営お知らせなど、遷移先の業務画面を持たない通知の全文表示)。
+     * メールのボタンから直接開いた場合も読んだことになるよう、表示時に既読にする。
+     */
+    public function show(DatabaseNotification $notification, MarkAsReadAction $action): View
+    {
+        $this->authorize('view', $notification);
+
+        $action($notification);
+
+        return view('notifications.show', [
+            'notification' => $notification,
+        ]);
+    }
+
     public function markAsRead(DatabaseNotification $notification, MarkAsReadAction $action): RedirectResponse
     {
         $this->authorize('markAsRead', $notification);
