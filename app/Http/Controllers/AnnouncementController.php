@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\Announcement\NoAnnouncementRecipientsException;
 use App\Http\Requests\Announcement\StoreRequest;
 use App\Models\Announcement;
 use App\UseCases\Announcement\CreateAction;
@@ -37,7 +38,12 @@ class AnnouncementController extends Controller
 
     public function store(StoreRequest $request, StoreAction $action): RedirectResponse
     {
-        $announcement = $action($request->user(), $request->validated());
+        try {
+            $announcement = $action($request->user(), $request->validated());
+        } catch (NoAnnouncementRecipientsException $e) {
+            // 共通の Handler は入力を引き継がないため、本文を打ち直さずに対象だけ選び直せるよう、ここで入力を残して戻す
+            return back()->withInput()->with('error', $e->getMessage());
+        }
 
         return redirect()
             ->route('admin.announcements.show', $announcement)

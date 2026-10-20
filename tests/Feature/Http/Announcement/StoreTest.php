@@ -132,7 +132,8 @@ class StoreTest extends TestCase
                 'target_certification_id' => $certification->id,
             ]))
             ->assertRedirect(route('admin.announcements.create'))
-            ->assertSessionHas('error', '配信対象の受講生がいないため、配信できませんでした。');
+            ->assertSessionHas('error', '配信対象の受講生がいないため、配信できませんでした。')
+            ->assertSessionHasInput(['title' => 'メンテナンスのお知らせ']);
 
         $this->assertDatabaseCount('announcements', 0);
         Notification::assertNothingSent();
