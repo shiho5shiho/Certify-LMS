@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\BrowseController;
 use App\Http\Controllers\CertificationCatalogController;
@@ -83,6 +84,7 @@ Route::middleware('auth')->group(function () {
     Route::get('enrollments/{enrollment}', [EnrollmentController::class, 'show'])
         ->withTrashed()
         ->name('enrollments.show');
+    Route::get('notifications/{notification}', [NotificationController::class, 'show'])->name('notifications.show');
     // 通知(自分宛の一覧 / 個別既読 + 関連画面へ移動 / 一括既読)。卒業ユーザーも閲覧できるよう active-learning は付けない
     Route::get('notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::post('notifications/read-all', [NotificationController::class, 'markAllAsRead'])->name('notifications.markAllAsRead');
@@ -255,6 +257,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
         ->name('admin.enrollments.updateExamDate');
     Route::post('enrollments/{enrollment}/fail', [EnrollmentManagementController::class, 'fail'])
         ->name('admin.enrollments.fail');
+
+    // 管理者お知らせ(配信履歴の一覧 / 新規配信 / 詳細)。配信後の編集・削除・再配信は不可のためルートを設けない
+    Route::resource('announcements', AnnouncementController::class)
+        ->only(['index', 'create', 'store', 'show'])
+        ->names('admin.announcements');
 });
 
 // ============================================================

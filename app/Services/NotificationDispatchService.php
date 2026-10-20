@@ -8,6 +8,7 @@ use App\Enums\UserRole;
 use App\Enums\UserStatus;
 use App\Models\User;
 use App\Notifications\BusinessEventNotification;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Notification;
 
 /**
@@ -26,7 +27,26 @@ final class NotificationDispatchService
      */
     public function send(iterable $candidates, User $actor, BusinessEventNotification $notification): void
     {
-        $recipients = collect($candidates)
+        $recipients = $this->filterRecipients($candidates, $actor);
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        Notification::send($recipients, $notification);
+    }
+
+    /**
+     * 受信対象の共通ルール(クラスコメント参照)で候補を絞り込み、実際に送る相手を返す。
+     * 送る前に人数を知りたい呼出側(管理者お知らせの 0 人チェック・配信件数)からも使う。
+     *
+     * @param iterable<int, User|null> $candidates
+     *
+     * @return Collection<int, User>
+     */
+    public function filterRecipients(iterable $candidates, User $actor): Collection
+    {
+        return collect($candidates)
             ->filter()
             ->unique('id')
             ->reject(fn (User $user) => $user->id === $actor->id)
@@ -36,11 +56,5 @@ final class NotificationDispatchService
                 UserRole::Admin => false,
             })
             ->values();
-
-        if ($recipients->isEmpty()) {
-            return;
-        }
-
-        Notification::send($recipients, $notification);
     }
 }
