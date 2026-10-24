@@ -25,7 +25,7 @@ final class NotificationDispatchService
     /**
      * @param iterable<int, User|null> $candidates
      */
-        public function send(iterable $candidates, ?User $actor, BusinessEventNotification $notification): void
+    public function send(iterable $candidates, ?User $actor, BusinessEventNotification $notification): void
     {
         $recipients = $this->filterRecipients($candidates, $actor);
 
