@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\ChatUnreadCountService;
 use App\UseCases\Dashboard\FetchCoachDashboardAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Mockery;
 use Tests\TestCase;
@@ -56,6 +57,34 @@ class FetchCoachDashboardActionTest extends TestCase
 
         $first = $vm->assignedEnrollments->first();
         $this->assertNotNull($first->last_activity_at);
+    }
+
+    public function test_last_activity_at_is_latest_started_at_and_null_without_sessions(): void
+    {
+        $coach = User::factory()->coach()->inProgress()->create();
+        $cert = Certification::factory()->published()->create();
+        $this->attachCoach($cert, $coach);
+        $withSessions = Enrollment::factory()->for($cert)->learning()->create();
+        $withoutSessions = Enrollment::factory()->for($cert)->learning()->create();
+
+        LearningSession::factory()
+            ->forEnrollment($withSessions)
+            ->closed()
+            ->startedOn(Carbon::parse('2026-10-20 10:00:00'))
+            ->create();
+        LearningSession::factory()
+            ->forEnrollment($withSessions)
+            ->closed()
+            ->startedOn(Carbon::parse('2026-10-22 15:30:00'))
+            ->create();
+
+        $vm = app(FetchCoachDashboardAction::class)($coach);
+        $rows = $vm->assignedEnrollments->keyBy('id');
+
+        $this->assertTrue(
+            Carbon::parse($rows[$withSessions->id]->last_activity_at)->equalTo('2026-10-22 15:30:00'),
+        );
+        $this->assertNull($rows[$withoutSessions->id]->last_activity_at);
     }
 
     public function test_only_passed_and_learning_enrollments_are_displayed(): void
