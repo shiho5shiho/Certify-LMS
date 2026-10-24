@@ -57,6 +57,39 @@ class IndexTest extends TestCase
         $response->assertDontSee('Other Cert');
     }
 
+        public function test_coach_cannot_see_unassigned_certification_enrollments_with_certification_filter(): void
+    {
+        // Arrange
+        $admin = User::factory()->admin()->create();
+        $coach = User::factory()->coach()->create();
+        $student = User::factory()->student()->create(['name' => 'Other Student']);
+
+        $assignedCert = Certification::factory()->published()->create(['name' => 'Assigned Cert']);
+        $otherCert = Certification::factory()->published()->create(['name' => 'Other Cert']);
+
+        CertificationCoachAssignment::create([
+            'id' => (string) Str::ulid(),
+            'certification_id' => $assignedCert->id,
+            'user_id' => $coach->id,
+            'assigned_by_user_id' => $admin->id,
+            'assigned_at' => now(),
+        ]);
+
+        Enrollment::factory()->learning()->create([
+            'user_id' => $student->id,
+            'certification_id' => $otherCert->id,
+        ]);
+
+        // Act
+        $response = $this->actingAs($coach)->get(route('enrollments.index', [
+            'certification_id' => $otherCert->id,
+        ]));
+
+        // Assert
+        $response->assertOk();
+        $response->assertDontSee('Other Student');
+    }
+
     public function test_guest_cannot_access(): void
     {
         // Act
