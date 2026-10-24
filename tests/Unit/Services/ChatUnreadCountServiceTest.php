@@ -78,7 +78,7 @@ class ChatUnreadCountServiceTest extends TestCase
         $this->assertSame(1, $count);
     }
 
-        public function test_room_count_for_user_excludes_room_with_only_own_messages(): void
+    public function test_room_count_for_user_excludes_room_with_only_own_messages(): void
     {
         $student = User::factory()->student()->inProgress()->create();
         $enrollment = Enrollment::factory()->for($student)->create();
