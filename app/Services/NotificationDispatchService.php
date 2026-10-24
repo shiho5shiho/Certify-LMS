@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Notification;
 /**
  * 業務イベント通知を、受信対象に絞り込んでから送る Service。
  *
- * - 操作した本人は除く(本人は操作直後の画面の完了メッセージで結果が分かるため)
+ * - 操作した本人は除く(本人は操作直後の画面の完了メッセージで結果が分かるため)。定期実行など本人がいない場合は null
  * - 管理者は除く(チケットのスコープ外「管理者向けの通知」)
  * - 受講生は受講中(in_progress)のみ
  * - コーチはロールのみで通す。有効な担当コーチかどうかは、呼出側が担当割当から候補を渡すことで担保する
@@ -25,7 +25,7 @@ final class NotificationDispatchService
     /**
      * @param iterable<int, User|null> $candidates
      */
-    public function send(iterable $candidates, User $actor, BusinessEventNotification $notification): void
+        public function send(iterable $candidates, ?User $actor, BusinessEventNotification $notification): void
     {
         $recipients = $this->filterRecipients($candidates, $actor);
 
@@ -44,12 +44,12 @@ final class NotificationDispatchService
      *
      * @return Collection<int, User>
      */
-    public function filterRecipients(iterable $candidates, User $actor): Collection
+    public function filterRecipients(iterable $candidates, ?User $actor): Collection
     {
         return collect($candidates)
             ->filter()
             ->unique('id')
-            ->reject(fn (User $user) => $user->id === $actor->id)
+            ->reject(fn (User $user) => $actor !== null && $user->id === $actor->id)
             ->filter(fn (User $user) => match ($user->role) {
                 UserRole::Student => $user->status === UserStatus::InProgress,
                 UserRole::Coach => true,
