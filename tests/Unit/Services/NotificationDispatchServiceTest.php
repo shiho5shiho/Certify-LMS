@@ -73,4 +73,18 @@ class NotificationDispatchServiceTest extends TestCase
 
         Notification::assertNothingSent();
     }
+
+    public function test_sends_to_all_valid_candidates_when_actor_is_null(): void
+    {
+        Notification::fake();
+
+        $student = User::factory()->student()->inProgress()->create();
+        $coach = User::factory()->coach()->inProgress()->create();
+        $notification = new QaThreadPostedNotification(QaThread::factory()->create(['user_id' => $student->id]));
+
+        app(NotificationDispatchService::class)->send([$student, $coach], null, $notification);
+
+        Notification::assertSentTo($student, QaThreadPostedNotification::class);
+        Notification::assertSentTo($coach, QaThreadPostedNotification::class);
+    }
 }
