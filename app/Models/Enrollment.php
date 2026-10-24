@@ -188,7 +188,10 @@ class Enrollment extends Model
     {
         return match ($user->role) {
             UserRole::Admin => $query,
-            UserRole::Coach => $query,
+            UserRole::Coach => $query->whereHas(
+                'certification',
+                fn (Builder $q) => $q->assignedTo($user),
+            ),
             UserRole::Student => $query->where('user_id', $user->id),
             default => $query->whereRaw('1 = 0'),
         };
