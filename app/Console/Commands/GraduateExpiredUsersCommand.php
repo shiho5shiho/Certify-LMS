@@ -34,7 +34,7 @@ class GraduateExpiredUsersCommand extends Command
             ->whereNotNull('plan_expires_at')
             ->where('plan_expires_at', '<', now())
             ->orderBy('id')
-            ->chunk(100, function ($users) use ($action, &$count): void {
+            ->chunkById(100, function ($users) use ($action, &$count): void {
                 foreach ($users as $user) {
                     $action($user);
                     $count++;
