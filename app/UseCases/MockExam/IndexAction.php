@@ -15,6 +15,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
  * - admin: 全資格配下の MockExam
  * - coach: 担当資格(certification.coaches)配下の MockExam のみ
  * フィルタ: keyword(部分一致) / certification_id / is_published
+ * 所属資格・作成者・更新者を with、問題数を withCount で一括取得し、一覧表示時の N+1 を防ぐ。
  */
 final class IndexAction
 {
@@ -47,6 +48,8 @@ final class IndexAction
         }
 
         return $query
+            ->with(['certification', 'createdBy', 'updatedBy'])
+            ->withCount('mockExamQuestions')
             ->orderBy('certification_id')
             ->orderBy('order')
             ->orderByDesc('updated_at')
