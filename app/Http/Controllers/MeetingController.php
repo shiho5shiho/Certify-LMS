@@ -192,7 +192,7 @@ class MeetingController extends Controller
 
             $availabilityService->validateSlot($enrollment->certification, $scheduledAt);
 
-            $candidates = $this->findAvailableCoaches($enrollment->certification, $scheduledAt);
+            $candidates = $this->findAvailableCoaches($enrollment->certification, $scheduledAt, $availabilityService);
             if ($candidates->isEmpty()) {
                 throw new MeetingNoAvailableCoachException;
             }
@@ -320,11 +320,15 @@ class MeetingController extends Controller
     /**
      * 担当コーチ集合のうち、(1) 当該時刻に有効な availability 枠があり、
      * (2) 当該時刻に reserved / completed の Meeting を持たないコーチ集合を返す。
+     * (3) Google カレンダー連携済みなら当該時刻に Google 上の予定がないコーチ集合を返す。
      *
      * @return Collection<int, User>
      */
-    private function findAvailableCoaches(Certification $certification, Carbon $scheduledAt): Collection
-    {
+    private function findAvailableCoaches(
+        Certification $certification,
+        Carbon $scheduledAt,
+        MeetingAvailabilityService $availabilityService
+    ): Collection {
         $time = $scheduledAt->format('H:i:s');
 
         return $certification->coaches()
@@ -338,6 +342,9 @@ class MeetingController extends Controller
                 $q->where('scheduled_at', $scheduledAt)
                     ->whereIn('status', [MeetingStatus::Reserved->value, MeetingStatus::Completed->value]);
             })
-            ->get();
+            ->with('googleCredential')
+            ->get()
+            ->reject(fn (User $coach) => $availabilityService->isBusyOnGoogleCalendar($coach, $scheduledAt->copy()))
+            ->values();
     }
 }
