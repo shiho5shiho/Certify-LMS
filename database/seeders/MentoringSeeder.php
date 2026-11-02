@@ -11,6 +11,7 @@ use App\Enums\UserStatus;
 use App\Models\CoachAvailability;
 use App\Models\Enrollment;
 use App\Models\EnrollmentNote;
+use App\Models\GoogleCalendarCredential;
 use App\Models\Meeting;
 use App\Models\MeetingMemo;
 use App\Models\MeetingQuotaTransaction;
@@ -33,6 +34,10 @@ use Illuminate\Database\Seeder;
  *
  * 依存: UserSeeder → CertificationSeeder → EnrollmentSeeder の後に走る前提
  * (`certification_coach_assignments` と `enrollments` を参照する)。
+ *
+ * - **Google カレンダー連携(GoogleCalendarCredential)**: コーチ花子をダミーの認証情報で「連携中」、コーチ太郎を未連携にする。
+ *   ダミーは連携状態の表示・解除の確認用で、Google には通らない。期限切れにしてあるため、空き枠の取得で
+ *   Google から無効と返された時点で未連携に戻る。実際の連携はコーチ太郎を各自の Google アカウントで連携して確認する。
  */
 final class MentoringSeeder extends Seeder
 {
@@ -43,6 +48,7 @@ final class MentoringSeeder extends Seeder
         $this->seedNoQuotaStudentMeetings();
         $this->seedDemoMeetings();
         $this->seedEnrollmentNotes();
+        $this->seedGoogleCalendarCredentials();
     }
 
     /**
@@ -352,5 +358,24 @@ final class MentoringSeeder extends Seeder
         }
 
         return $date->subWeeks($weeksAgo)->setTime($hour, 0, 0);
+    }
+
+    /**
+     * コーチ花子をダミーの認証情報で「連携中」にする(連携状態の表示・解除の確認用)。
+     * コーチ太郎は、各自の Google アカウントで実際に連携して確認できるよう未連携のままにする。
+     * 期限内のダミーだと空き枠の取得が毎回失敗し、コーチ花子の枠が常に予約不可になるため、期限切れで入れる。
+     */
+    private function seedGoogleCalendarCredentials(): void
+    {
+        $coach2 = User::query()->where('email', 'coach2@certify-lms.test')->first();
+        if ($coach2 === null) {
+            return;
+        }
+
+        GoogleCalendarCredential::factory()->forCoach($coach2)->create([
+            'calendar_id' => 'coach2-dummy@certify-lms.test',
+            'token_expires_at' => now()->subDay(),
+            'connected_at' => now()->subDays(7),
+        ]);
     }
 }

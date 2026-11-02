@@ -141,5 +141,42 @@ sail bin pint --test     # 整形漏れの確認（CI 相当のチェック）
 `.env.example` をコピーするだけで、すべての機能がローカルで動作します（メールは Mailpit に配信されます）。
 
 - `PUSHER_*` — チャットのリアルタイム配信に使用します。有効にする場合は Pusher のキーを取得して設定し、`BROADCAST_DRIVER=pusher` に変更してください。未設定（既定の `BROADCAST_DRIVER=log`）でもメッセージの送受信自体は動作し、相手画面へのリアルタイム反映のみ行われません
+- `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_REDIRECT_URI` — コーチの Google カレンダー連携（面談予約）に使用します。未設定でも面談機能は動作し、連携ボタンを押したときのみ失敗します。設定手順は「Google カレンダー連携の設定」を参照してください
 
 新しい環境変数やセットアップ手順を追加した場合は、`.env.example` と本 README に追記し、チームの誰でも環境を再現できる状態を保ってください。
+
+## Google カレンダー連携の設定
+
+コーチが面談設定画面から自分の Google カレンダーを連携すると、予定の入っている時間が受講生の予約画面の空き枠から外れ、予約・キャンセルした面談がコーチのカレンダーに自動で登録・削除されます。
+
+1. [Google Cloud Console](https://console.cloud.google.com/) でプロジェクトを作成（既存のものでも可）し、「API とサービス」→「ライブラリ」で **Google Calendar API** を有効にする
+2. 「Google Auth Platform」で次を設定する
+   - 対象: ユーザーの種類は「外部」、公開ステータスは「テスト」のまま。「テストユーザー」に動作確認に使う Google アカウントを追加する
+   - データアクセス: スコープ `https://www.googleapis.com/auth/calendar.readonly` と `https://www.googleapis.com/auth/calendar.events` を追加する
+   - クライアント: 種類「ウェブ アプリケーション」で作成し、承認済みのリダイレクト URI に `http://localhost:8000/settings/google-calendar/callback` を登録する
+3. 発行されたクライアント ID・シークレットを `.env` に設定し、`sail artisan config:clear` を実行する
+   ```
+   GOOGLE_CLIENT_ID=  
+   GOOGLE_CLIENT_SECRET=  
+   GOOGLE_REDIRECT_URI="${APP_URL}/settings/google-calendar/callback"
+   ```
+4. コーチ（`coach@certify-lms.test`）でログインし、面談設定の「Googleカレンダーと連携する」から、手順 2 で追加したテストユーザーの Google アカウントで連携する
+
+**初期データ**
+
+| アカウント | 連携状態 | 用途 |
+| --- | --- | --- |
+| コーチ太郎（`coach@certify-lms.test`） | 未連携 | 手順 4 で各自の Google アカウントと連携し、実際の動作を確認する |
+| コーチ花子（`coach2@certify-lms.test`） | 連携中（ダミー） | 連携状態の表示・解除の確認用。Google には通らないため、受講生の予約画面で空き枠が取得された時点で未連携に戻る |
+
+**確認方法**（コーチ太郎を連携した状態で）
+
+1. 連携した Google カレンダーに、コーチ太郎の面談可能時間枠（平日 19:00〜21:00）と重なる予定を入れる
+2. 受講生花子（`student@certify-lms.test`）で面談予約画面を開き、その日を選ぶ → 予定と重なる時間が空き枠に表示されない（Google 側で「予定なし」にした予定は表示される）
+3. 空いている枠を予約する → コーチ太郎の Google カレンダーに「【Certify LMS】面談：…」の予定が登録される
+4. その面談をキャンセルする → Google カレンダーの予定が削除される
+
+**補足**
+
+- 公開ステータスが「テスト」のアプリでは、連携から 7 日で Google 側の認証情報が無効になり、LMS 上も未連携に戻ります。その場合はもう一度連携してください
+- 認証情報（トークン）は DB に平文で保存しています。本番運用では暗号化して保存してください（例: Model の `encrypted` キャスト）

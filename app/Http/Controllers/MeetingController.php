@@ -26,6 +26,8 @@ use App\Services\CoachMeetingLoadService;
 use App\Services\MeetingAvailabilityService;
 use App\Services\MeetingQuotaService;
 use App\Services\NotificationDispatchService;
+use App\UseCases\GoogleCalendar\DeleteMeetingEventAction;
+use App\UseCases\GoogleCalendar\RegisterMeetingEventAction;
 use App\UseCases\MeetingQuota\ConsumeQuotaAction;
 use App\UseCases\MeetingQuota\RefundQuotaAction;
 use Carbon\Carbon;
@@ -162,6 +164,7 @@ class MeetingController extends Controller
     /**
      * 受講生の予約申請。残面談回数を確認し、空き枠から過去実績最少のコーチを自動割当して reserved で確定する。
      * 同時刻 race condition は (coach_id, scheduled_at) UNIQUE 違反として検知し 409 へ変換する。
+     * 担当コーチが Google カレンダー連携済みなら、確定後に予定を登録する。
      */
     public function store(
         Enrollment $enrollment,
@@ -171,6 +174,7 @@ class MeetingController extends Controller
         MeetingQuotaService $quotaService,
         ConsumeQuotaAction $consumeAction,
         NotificationDispatchService $notifier,
+        RegisterMeetingEventAction $registerEventAction,
     ): RedirectResponse {
         $scheduledAt = Carbon::parse($request->validated('scheduled_at'));
         $topic = $request->validated('topic');
@@ -192,7 +196,7 @@ class MeetingController extends Controller
 
             $availabilityService->validateSlot($enrollment->certification, $scheduledAt);
 
-            $candidates = $this->findAvailableCoaches($enrollment->certification, $scheduledAt);
+            $candidates = $this->findAvailableCoaches($enrollment->certification, $scheduledAt, $availabilityService);
             if ($candidates->isEmpty()) {
                 throw new MeetingNoAvailableCoachException;
             }
@@ -220,8 +224,11 @@ class MeetingController extends Controller
             return $meeting->fresh();
         });
 
-        $meeting->load(['coach', 'student', 'enrollment.certification']);
+        $meeting->load(['coach.googleCredential', 'student', 'enrollment.certification']);
+
         $notifier->send([$meeting->coach], $student, new MeetingReservedNotification($meeting));
+        // DB の確定後に登録する(登録に失敗しても予約は成立させる)
+        ($registerEventAction)($meeting);
 
         return redirect()
             ->route('meetings.show', $meeting)
@@ -231,11 +238,13 @@ class MeetingController extends Controller
     /**
      * 当事者(受講生 or コーチ)による面談キャンセル。
      * reserved かつ開始前のみキャンセル可。消費済の面談回数 1 回分を返却する。
+     * 登録済みの Google カレンダーの予定を削除する。
      */
     public function cancel(
         Meeting $meeting,
         RefundQuotaAction $refundAction,
         NotificationDispatchService $notifier,
+        DeleteMeetingEventAction $deleteEventAction,
     ): RedirectResponse {
         $this->authorize('cancel', $meeting);
 
@@ -260,7 +269,9 @@ class MeetingController extends Controller
             ($refundAction)($locked->student, $locked->id);
         });
 
-        $meeting->refresh()->load(['coach', 'student', 'enrollment.certification']);
+        $meeting->refresh()->load(['coach.googleCredential', 'student', 'enrollment.certification']);
+        // DB の確定後に削除する(削除に失敗してもキャンセルは成立させる)
+        ($deleteEventAction)($meeting);
         // 面談キャンセルは例外として、担当解除後でもその面談のコーチに通知する(PM 確認済み)
         $notifier->send(
             [$meeting->coach, $meeting->student],
@@ -320,11 +331,15 @@ class MeetingController extends Controller
     /**
      * 担当コーチ集合のうち、(1) 当該時刻に有効な availability 枠があり、
      * (2) 当該時刻に reserved / completed の Meeting を持たないコーチ集合を返す。
+     * (3) Google カレンダー連携済みなら当該時刻に Google 上の予定がないコーチ集合を返す。
      *
      * @return Collection<int, User>
      */
-    private function findAvailableCoaches(Certification $certification, Carbon $scheduledAt): Collection
-    {
+    private function findAvailableCoaches(
+        Certification $certification,
+        Carbon $scheduledAt,
+        MeetingAvailabilityService $availabilityService
+    ): Collection {
         $time = $scheduledAt->format('H:i:s');
 
         return $certification->coaches()
@@ -338,6 +353,9 @@ class MeetingController extends Controller
                 $q->where('scheduled_at', $scheduledAt)
                     ->whereIn('status', [MeetingStatus::Reserved->value, MeetingStatus::Completed->value]);
             })
-            ->get();
+            ->with('googleCredential')
+            ->get()
+            ->reject(fn (User $coach) => $availabilityService->isBusyOnGoogleCalendar($coach, $scheduledAt->copy()))
+            ->values();
     }
 }
