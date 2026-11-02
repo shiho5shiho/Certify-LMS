@@ -198,7 +198,12 @@ final class GoogleCalendarService implements GoogleCalendarServiceContract
         // refresh token を受け取るため、オフラインアクセスと毎回の同意画面表示を指定する
         $client->setAccessType('offline');
         $client->setPrompt('consent');
-        $client->setHttpClient(new HttpClient(['timeout' => self::TIMEOUT_SECONDS]));
+        // http_errors を無効にし、Google のエラー応答(invalid_grant など)を例外ではなく配列で受け取る
+        // (Google のライブラリが標準で使う HTTP クライアントと同じ設定)
+        $client->setHttpClient(new HttpClient([
+            'timeout' => self::TIMEOUT_SECONDS,
+            'http_errors' => false,
+        ]));
 
         return $client;
     }
