@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Services\Contracts\GeminiServiceContract;
 use App\Services\Contracts\GoogleCalendarServiceContract;
+use App\Services\GeminiService;
 use App\Services\GoogleCalendarService;
 use App\View\Composers\EnrollmentSwitcherComposer;
 use App\View\Composers\NotificationBadgeComposer;
@@ -18,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(GoogleCalendarServiceContract::class, GoogleCalendarService::class);
+        $this->app->bind(GeminiServiceContract::class, GeminiService::class);
     }
 
     public function boot(): void

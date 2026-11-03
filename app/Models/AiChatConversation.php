@@ -67,6 +67,8 @@ class AiChatConversation extends Model
      */
     public function messages(): HasMany
     {
-        return $this->hasMany(AiChatMessage::class)->oldest();
+        return $this->hasMany(AiChatMessage::class)
+            ->orderBy('created_at')
+            ->orderBy('id');
     }
 }
