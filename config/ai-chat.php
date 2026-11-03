@@ -16,7 +16,7 @@ return [
         'api_key' => env('GEMINI_API_KEY'),
         'model' => env('GEMINI_MODEL', 'gemini-3.6-flash'),
         'base_url' => env('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
-        'timeout' => (int) env('GEMINI_TIMEOUT', 30),
+        'timeout' => (int) env('GEMINI_TIMEOUT', 60),
     ],
 
     // 受講生 1 人あたりの 1 日の送信上限(日本時間 0:00 区切り、AI 応答の失敗分も含む)

@@ -203,6 +203,7 @@ sail bin pint --test     # 整形漏れの確認（CI 相当のチェック）
 | --- | --- | --- |
 | `GEMINI_API_KEY` | （空） | Gemini の API キー。未設定の場合、AI 相談は「現在ご利用いただけません」と案内され、Gemini へのリクエストは行われない |
 | `GEMINI_MODEL` | `gemini-3.6-flash` | 使用するモデル |
+| `GEMINI_TIMEOUT` | `60` | Gemini の応答を待つ秒数。超えた場合は AI 応答の失敗として扱う |
 | `AI_CHAT_ENABLED` | `true` | AI 相談機能全体の ON / OFF。`false` にすると、AI 相談の画面・サイドバー・ウィジェットがすべて利用できなくなる |
 | `AI_CHAT_DAILY_LIMIT` | `30` | 受講生 1 人あたりの 1 日の送信上限（日本時間 0:00 にリセット。AI 応答に失敗した分も数える） |
 | `AI_CHAT_HISTORY_LIMIT` | `10` | AI に引き継ぐ直近の会話履歴の件数（エラーになったやり取りは除く） |
