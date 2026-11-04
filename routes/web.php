@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AiChatController;
 use App\Http\Controllers\AnnouncementController;
 use App\Http\Controllers\Auth\OnboardingController;
 use App\Http\Controllers\BrowseController;
@@ -520,6 +521,22 @@ Route::middleware(['auth', 'role:student,coach', 'active-learning'])->group(func
     Route::patch('qa-board/{thread}/replies/{reply}', [QaReplyController::class, 'update'])->name('qa-board.replies.update');
     Route::delete('qa-board/{thread}/replies/{reply}', [QaReplyController::class, 'destroy'])->name('qa-board.replies.destroy');
 });
+
+// ============================================================
+// 受講生専用 — AI 相談
+// 機能 OFF(AI_CHAT_ENABLED=false)のときはルートごと登録しない。
+// URL は 404 になり、サイドバーの「AI 相談」(components/nav/item はルート未登録時に非表示)も自動で消える。
+// ============================================================
+if (config('ai-chat.enabled')) {
+    Route::middleware(['auth', 'role:student', 'active-learning'])->group(function () {
+        Route::get('ai-chat', [AiChatController::class, 'index'])->name('ai-chat.index');
+        Route::post('ai-chat/conversations', [AiChatController::class, 'store'])->name('ai-chat.conversations.store');
+        Route::get('ai-chat/conversations/{conversation}', [AiChatController::class, 'show'])->name('ai-chat.conversations.show');
+        Route::patch('ai-chat/conversations/{conversation}', [AiChatController::class, 'update'])->name('ai-chat.conversations.update');
+        Route::delete('ai-chat/conversations/{conversation}', [AiChatController::class, 'destroy'])->name('ai-chat.conversations.destroy');
+        Route::post('ai-chat/conversations/{conversation}/messages', [AiChatController::class, 'storeMessage'])->name('ai-chat.conversations.messages.store');
+    });
+}
 
 // ============================================================
 // 管理者専用 — 質問掲示板モデレーション
