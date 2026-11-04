@@ -182,18 +182,25 @@ class AiChatMessageTest extends TestCase
         $this->postJson($this->messagesUrl($this->conversation()), ['content' => '質問です'])->assertStatus(429);
     }
 
-    public function test_does_not_call_gemini_when_api_key_is_missing(): void
+    public function test_shows_unavailable_message_without_calling_gemini_when_api_key_is_missing(): void
     {
-        config(['ai-chat.gemini.api_key' => null]);
+        config(['ai-chat.gemini.api_key' => null, 'ai-chat.daily_limit' => 1]);
         Http::fake();
+        $conversation = $this->conversation();
+        $this->actingAs($this->student);
 
-        $this->actingAs($this->student)
-            ->postJson($this->messagesUrl($this->conversation()), ['content' => '質問です'])
-            ->assertStatus(503)
-            ->assertJsonPath('message', 'AI 相談は現在ご利用いただけません。');
+        $this->postJson($this->messagesUrl($conversation), ['content' => '質問です'])
+            ->assertOk()
+            ->assertJsonPath('user_message.content', '質問です')
+            ->assertJsonPath('assistant_message.status', 'error')
+            ->assertJsonPath('assistant_message.content', 'AI 相談は現在ご利用いただけません。');
+
+        // 日次上限(1 回)に数えられていないので、2 回目も同じ案内になる(429 にならない)
+        $this->postJson($this->messagesUrl($conversation), ['content' => 'もう一度'])
+            ->assertOk()
+            ->assertJsonPath('assistant_message.content', 'AI 相談は現在ご利用いただけません。');
 
         Http::assertNothingSent();
-        $this->assertDatabaseCount('ai_chat_messages', 0);
     }
 
     public function test_section_context_is_sent_to_gemini(): void

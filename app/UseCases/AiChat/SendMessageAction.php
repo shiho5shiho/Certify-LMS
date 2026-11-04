@@ -22,7 +22,8 @@ use Illuminate\Support\Str;
 /**
  * AI 相談のメッセージ送信(同期)。
  *
- * 1. API キー未設定・日次上限超過なら、何も保存せずに止める
+ * 1. API キー未設定なら Gemini を呼ばずに、利用できない旨を AI 側のエラーとして保存する(回数に数えない)
+ *    日次上限超過なら、何も保存せずに止める
  * 2. 受講生の質問と、応答待ち(pending)の AI メッセージを保存し、送信回数を数える
  * 3. Gemini を呼び、成功なら AI メッセージを completed、失敗なら error で保存する(質問は残る)
  * 4. 最初の AI 応答が成功したときに、会話タイトルを AI で 1 回だけ付け直す
@@ -47,30 +48,23 @@ final class SendMessageAction
     public function __invoke(AiChatConversation $conversation, string $content): array
     {
         $conversation->loadMissing('user');
-        $this->ensureSendable($conversation->user);
 
-        [$question, $answer] = DB::transaction(function () use ($conversation, $content) {
-            $isFirstMessage = ! $conversation->messages()->exists();
-
-            $question = $conversation->messages()->create([
-                'role' => AiChatMessageRole::User,
-                'status' => AiChatMessageStatus::Completed,
-                'content' => $content,
-            ]);
-            $answer = $conversation->messages()->create([
-                'role' => AiChatMessageRole::Assistant,
-                'status' => AiChatMessageStatus::Pending,
-                'content' => '',
+        // API キー未設定: Gemini を呼ばず、回数にも数えず、利用できない旨を AI 側のエラーとして残す(PM 確認 Q5・Q7)
+        // 提供済み JS は status=error の AI メッセージの content をそのまま表示するため、JS を変更せずに案内できる
+        if ($this->isUnavailable()) {
+            [$question, $answer] = $this->saveExchange($conversation, $content);
+            $answer->update([
+                'status' => AiChatMessageStatus::Error,
+                'content' => AiChatUnavailableException::MESSAGE,
+                'error_detail' => 'GEMINI_API_KEY が未設定のため、Gemini を呼び出していません。',
             ]);
 
-            $attributes = ['last_message_at' => now()];
-            if ($isFirstMessage && ! $conversation->title_edited_by_user) {
-                $attributes['title'] = Str::limit($content, self::PROVISIONAL_TITLE_LENGTH);
-            }
-            $conversation->update($attributes);
+            return ['user_message' => $question, 'assistant_message' => $answer, 'failure' => null];
+        }
 
-            return [$question, $answer];
-        });
+        $this->limiter->ensureNotExceeded($conversation->user);
+
+        [$question, $answer] = $this->saveExchange($conversation, $content);
 
         // AI 応答の成否にかかわらず数える(PM 確認 Q1)
         $this->limiter->hit($conversation->user);
@@ -119,11 +113,48 @@ final class SendMessageAction
      */
     public function ensureSendable(User $user): void
     {
-        if (blank(config('ai-chat.gemini.api_key'))) {
+        if ($this->isUnavailable()) {
             throw new AiChatUnavailableException;
         }
 
         $this->limiter->ensureNotExceeded($user);
+    }
+
+    private function isUnavailable(): bool
+    {
+        return blank(config('ai-chat.gemini.api_key'));
+    }
+
+    /**
+     * 受講生の質問と、応答待ち(pending)の AI メッセージを保存する。
+     * 最初の質問であれば、仮タイトルとして質問の先頭を使う。
+     *
+     * @return array{0: AiChatMessage, 1: AiChatMessage}
+     */
+    private function saveExchange(AiChatConversation $conversation, string $content): array
+    {
+        return DB::transaction(function () use ($conversation, $content) {
+            $isFirstMessage = ! $conversation->messages()->exists();
+
+            $question = $conversation->messages()->create([
+                'role' => AiChatMessageRole::User,
+                'status' => AiChatMessageStatus::Completed,
+                'content' => $content,
+            ]);
+            $answer = $conversation->messages()->create([
+                'role' => AiChatMessageRole::Assistant,
+                'status' => AiChatMessageStatus::Pending,
+                'content' => '',
+            ]);
+
+            $attributes = ['last_message_at' => now()];
+            if ($isFirstMessage && ! $conversation->title_edited_by_user) {
+                $attributes['title'] = Str::limit($content, self::PROVISIONAL_TITLE_LENGTH);
+            }
+            $conversation->update($attributes);
+
+            return [$question, $answer];
+        });
     }
 
     /**
