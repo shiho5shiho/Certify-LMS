@@ -24,10 +24,11 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('meetings', function (Blueprint $table) {
-            // 外部キー coach_id 用の INDEX を先に作り直してから UNIQUE を削除する
-            $table->index('coach_id');
+         Schema::table('meetings', function (Blueprint $table) {
+            // UNIQUE が外部キー coach_id の INDEX を兼ねている場合があるため、外部キーを外してから削除し、付け直す
+            $table->dropForeign(['coach_id']);
             $table->dropUnique(['coach_id', 'scheduled_at']);
+            $table->foreign('coach_id')->references('id')->on('users')->restrictOnDelete();
         });
     }
 };
