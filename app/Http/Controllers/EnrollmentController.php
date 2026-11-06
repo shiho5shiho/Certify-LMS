@@ -14,6 +14,7 @@ use App\Models\Chapter;
 use App\Models\Enrollment;
 use App\Models\Part;
 use App\Services\Learning\ProgressSummary;
+use App\Services\LearningProgressService;
 use App\UseCases\Enrollment\DestroyAction;
 use App\UseCases\Enrollment\IndexAction;
 use App\UseCases\Enrollment\ResumeAction;
@@ -99,6 +100,7 @@ class EnrollmentController extends Controller
     public function show(
         Enrollment $enrollment,
         ShowAction $action,
+        LearningProgressService $progressService,
     ): View {
         $this->authorize('view', $enrollment);
 
@@ -110,7 +112,7 @@ class EnrollmentController extends Controller
         // staff(admin / coach)時のみ進捗集計を行う
         if (in_array($user->role, [UserRole::Coach, UserRole::Admin], true)) {
             $enrollment->loadMissing(['user']);
-            $progress = $this->summarizeProgress($enrollment);
+            $progress = $progressService->summarize($enrollment);
         }
 
         // admin 時のみ状態遷移ログを eager-load(管理画面の監査ビュー)
