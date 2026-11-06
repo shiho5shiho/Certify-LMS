@@ -5,9 +5,7 @@ declare(strict_types=1);
 namespace App\UseCases\Learning;
 
 use App\Enums\ContentStatus;
-use App\Models\Chapter;
 use App\Models\Enrollment;
-use App\Models\Part;
 use App\Services\LearningHourTargetService;
 use App\Services\LearningProgressService;
 use App\Services\SectionQuestionScoreService;
