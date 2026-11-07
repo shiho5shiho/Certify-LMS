@@ -6,8 +6,10 @@ namespace App\Providers;
 
 use App\Services\Contracts\GeminiServiceContract;
 use App\Services\Contracts\GoogleCalendarServiceContract;
+use App\Services\Contracts\StripeServiceContract;
 use App\Services\GeminiService;
 use App\Services\GoogleCalendarService;
+use App\Services\StripeService;
 use App\View\Composers\EnrollmentSwitcherComposer;
 use App\View\Composers\NotificationBadgeComposer;
 use App\View\Composers\SectionPageMetaComposer;
@@ -21,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(GoogleCalendarServiceContract::class, GoogleCalendarService::class);
         $this->app->bind(GeminiServiceContract::class, GeminiService::class);
+        $this->app->bind(StripeServiceContract::class, StripeService::class);
     }
 
     public function boot(): void

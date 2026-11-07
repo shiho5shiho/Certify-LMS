@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\MeetingPack;
 
 use App\Models\MeetingPack;
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -88,5 +89,20 @@ class IndexTest extends TestCase
 
         // Assert
         $response->assertForbidden();
+    }
+
+    public function test_shows_payment_count_per_pack(): void
+    {
+        // Arrange
+        $admin = User::factory()->admin()->create();
+        $pack = MeetingPack::factory()->published()->create();
+        Payment::factory()->count(2)->for($pack, 'meetingPack')->create();
+
+        // Act
+        $response = $this->actingAs($admin)->get(route('admin.meeting-packs.index'));
+
+        // Assert
+        $response->assertOk();
+        $response->assertViewHas('plans', fn ($plans) => $plans->firstWhere('id', $pack->id)->payments_count === 2);
     }
 }
