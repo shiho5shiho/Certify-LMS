@@ -52,6 +52,7 @@ use App\Http\Controllers\Settings\GoogleCalendarController as SettingsGoogleCale
 use App\Http\Controllers\Settings\PasswordController as SettingsPasswordController;
 use App\Http\Controllers\Settings\ProfileController as SettingsProfileController;
 use App\Http\Controllers\Settings\SettingsDefaultEnrollmentController;
+use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WeakDrillController;
 use App\Http\Controllers\WeakDrillResultController;
@@ -72,6 +73,11 @@ Route::get('/onboarding/{invitation}', [OnboardingController::class, 'show'])
 Route::post('/onboarding/{invitation}', [OnboardingController::class, 'store'])
     ->middleware('signed')
     ->name('onboarding.store');
+
+// ============================================================
+// Stripe からの決済結果の通知(認証なし・署名検証のみ)
+// ============================================================
+Route::post('/webhooks/stripe', StripeWebhookController::class)->name('webhooks.stripe');
 
 // ============================================================
 // 認証後の全ロール共通ルート
