@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -13,9 +15,29 @@ use Illuminate\Notifications\Notification;
  * アプリ内通知(database)とメール(mail)に同時に送る。
  * 子クラスは種別・タイトル・本文・移動先 URL の 4 つを返すだけにする。
  * 保存するキー(notification_type / title / message / url)は notifications/_partials/notification-row.blade.php が読む形に合わせる。
+ *
+ * 送信はキュー経由で行う(ShouldQueue)。worker が「受信者 × チャネル」ごとに 1 ジョブずつ送るため、1 件の送信失敗がほかの受信者・チャネルに影響しない。
+ * 一時的な失敗は 10 秒 → 1 分 → 5 分の間隔で最大 3 回リトライし、それでも失敗したら failed_jobs に記録する(PM 確認済)。
  */
-abstract class BusinessEventNotification extends Notification
+abstract class BusinessEventNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
+    /**
+     * 試行回数の上限(初回 + リトライ 3 回)。
+     */
+    public int $tries = 4;
+
+    /**
+     * リトライまでの待機秒数(1 回目 / 2 回目 / 3 回目)。
+     *
+     * @return array<int, int>
+     */
+    public function backoff(): array
+    {
+        return [10, 60, 300];
+    }
+
     abstract protected function notificationType(): string;
 
     abstract protected function title(): string;
