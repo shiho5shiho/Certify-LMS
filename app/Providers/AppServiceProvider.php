@@ -6,16 +6,16 @@ namespace App\Providers;
 
 use App\Services\Contracts\GeminiServiceContract;
 use App\Services\Contracts\GoogleCalendarServiceContract;
+use App\Services\Contracts\StripeServiceContract;
 use App\Services\GeminiService;
 use App\Services\GoogleCalendarService;
+use App\Services\StripeService;
 use App\View\Composers\EnrollmentSwitcherComposer;
 use App\View\Composers\NotificationBadgeComposer;
 use App\View\Composers\SectionPageMetaComposer;
 use App\View\Composers\SidebarBadgeComposer;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use App\Services\Contracts\StripeServiceContract;
-use App\Services\StripeService;
 
 class AppServiceProvider extends ServiceProvider
 {
