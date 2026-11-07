@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\MeetingPack;
 
 use App\Models\MeetingPack;
+use App\Models\Payment;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -52,6 +53,22 @@ class DestroyTest extends TestCase
 
         // Assert
         $response->assertStatus(409);
+        $this->assertDatabaseHas('meeting_packs', ['id' => $pack->id]);
+    }
+
+    public function test_cannot_delete_meeting_pack_with_payments(): void
+    {
+        // Arrange
+        $admin = User::factory()->admin()->create();
+        $pack = MeetingPack::factory()->archived()->create();
+        Payment::factory()->failed()->for($pack, 'meetingPack')->create();
+
+        // Act
+        $response = $this->actingAs($admin)->deleteJson(route('admin.meeting-packs.destroy', $pack));
+
+        // Assert
+        $response->assertStatus(409);
+        $response->assertJson(['message' => '購入記録がある面談パックは削除できません。']);
         $this->assertDatabaseHas('meeting_packs', ['id' => $pack->id]);
     }
 
