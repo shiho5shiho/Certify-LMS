@@ -33,6 +33,8 @@ class DatabaseSeeder extends Seeder
             CertificateSeeder::class,
             NotificationSeeder::class,
             AnnouncementSeeder::class,
+            MeetingPackSeeder::class,
+            PaymentSeeder::class,
         ]);
     }
 }
