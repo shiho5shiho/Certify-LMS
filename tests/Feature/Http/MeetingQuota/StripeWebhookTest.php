@@ -9,13 +9,15 @@ use App\Enums\PaymentStatus;
 use App\Models\MeetingQuotaTransaction;
 use App\Models\Payment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
+use Stripe\Webhook;
+use Tests\Support\StripeWebhookTestHelpers;
 use Tests\TestCase;
 
 class StripeWebhookTest extends TestCase
 {
     use RefreshDatabase;
+    use StripeWebhookTestHelpers;
 
     private const WEBHOOK_SECRET = 'whsec_test_secret';
 
@@ -32,7 +34,7 @@ class StripeWebhookTest extends TestCase
         $payment = Payment::factory()->pending()->create(['quantity' => 5]);
 
         // Act
-        $response = $this->postWebhook($this->event('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'));
+        $response = $this->postWebhook($this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'));
 
         // Assert
         $response->assertNoContent();
@@ -53,7 +55,7 @@ class StripeWebhookTest extends TestCase
         $payment = Payment::factory()->pending()->create();
 
         // Act
-        $response = $this->postWebhook($this->event('checkout.session.completed', $payment->stripe_checkout_session_id, 'unpaid'));
+        $response = $this->postWebhook($this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'unpaid'));
 
         // Assert
         $response->assertNoContent();
@@ -67,7 +69,7 @@ class StripeWebhookTest extends TestCase
         $payment = Payment::factory()->pending()->create();
 
         // Act
-        $response = $this->postWebhook($this->event('checkout.session.async_payment_succeeded', $payment->stripe_checkout_session_id, 'paid'));
+        $response = $this->postWebhook($this->stripeCheckoutEvent('checkout.session.async_payment_succeeded', $payment->stripe_checkout_session_id, 'paid'));
 
         // Assert
         $response->assertNoContent();
@@ -82,7 +84,7 @@ class StripeWebhookTest extends TestCase
             $payment = Payment::factory()->pending()->create();
 
             // Act
-            $response = $this->postWebhook($this->event($type, $payment->stripe_checkout_session_id, 'unpaid'));
+            $response = $this->postWebhook($this->stripeCheckoutEvent($type, $payment->stripe_checkout_session_id, 'unpaid'));
 
             // Assert
             $response->assertNoContent();
@@ -96,11 +98,25 @@ class StripeWebhookTest extends TestCase
     {
         // Arrange
         $payment = Payment::factory()->pending()->create();
-        $event = $this->event('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid');
+        $event = $this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid');
 
         // Act
         $this->postWebhook($event)->assertNoContent();
         $this->postWebhook($event)->assertNoContent();
+
+        // Assert
+        $this->assertSame(PaymentStatus::Succeeded, $payment->refresh()->status);
+        $this->assertSame(1, MeetingQuotaTransaction::where('related_payment_id', $payment->id)->count());
+    }
+
+    public function test_completed_and_async_succeeded_for_same_payment_grant_quota_only_once(): void
+    {
+        // Arrange
+        $payment = Payment::factory()->pending()->create();
+
+        // Act: 決済完了と支払い確定の通知が、同じ決済について両方届く
+        $this->postWebhook($this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'))->assertNoContent();
+        $this->postWebhook($this->stripeCheckoutEvent('checkout.session.async_payment_succeeded', $payment->stripe_checkout_session_id, 'paid'))->assertNoContent();
 
         // Assert
         $this->assertSame(PaymentStatus::Succeeded, $payment->refresh()->status);
@@ -113,7 +129,7 @@ class StripeWebhookTest extends TestCase
         $payment = Payment::factory()->succeeded()->create();
 
         // Act
-        $response = $this->postWebhook($this->event('checkout.session.expired', $payment->stripe_checkout_session_id, 'unpaid'));
+        $response = $this->postWebhook($this->stripeCheckoutEvent('checkout.session.expired', $payment->stripe_checkout_session_id, 'unpaid'));
 
         // Assert
         $response->assertNoContent();
@@ -127,7 +143,7 @@ class StripeWebhookTest extends TestCase
 
         // Act
         $response = $this->postWebhook(
-            $this->event('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'),
+            $this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'),
             't='.time().',v1=forged-signature',
         );
 
@@ -141,8 +157,8 @@ class StripeWebhookTest extends TestCase
     {
         // Arrange
         $payment = Payment::factory()->pending()->create();
-        $event = $this->event('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid');
-        $signature = $this->sign(json_encode($event, JSON_THROW_ON_ERROR));
+        $event = $this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid');
+        $signature = $this->stripeSignature(json_encode($event, JSON_THROW_ON_ERROR), self::WEBHOOK_SECRET);
         config(['services.stripe.webhook_secret' => null]);
 
         // Act
@@ -153,13 +169,88 @@ class StripeWebhookTest extends TestCase
         $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
     }
 
+    public function test_missing_signature_header_is_rejected(): void
+    {
+        // Arrange
+        $payment = Payment::factory()->pending()->create();
+        $payload = json_encode($this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'), JSON_THROW_ON_ERROR);
+
+        // Act
+        $response = $this->postStripeWebhook($payload, null);
+
+        // Assert
+        $response->assertStatus(400);
+        $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
+        $this->assertDatabaseCount('meeting_quota_transactions', 0);
+    }
+
+    public function test_signature_with_other_secret_is_rejected(): void
+    {
+        // Arrange
+        $payment = Payment::factory()->pending()->create();
+        $payload = json_encode($this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'), JSON_THROW_ON_ERROR);
+
+        // Act
+        $response = $this->postStripeWebhook($payload, $this->stripeSignature($payload, 'whsec_other_secret'));
+
+        // Assert
+        $response->assertStatus(400);
+        $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
+    }
+
+    public function test_tampered_payload_is_rejected(): void
+    {
+        // Arrange: 未払い(unpaid)の通知に付いた正規の署名のまま、本文だけ支払い済み(paid)に書き換える
+        $payment = Payment::factory()->pending()->create();
+        $signedPayload = json_encode($this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'unpaid'), JSON_THROW_ON_ERROR);
+        $tamperedPayload = json_encode($this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'), JSON_THROW_ON_ERROR);
+
+        // Act
+        $response = $this->postStripeWebhook($tamperedPayload, $this->stripeSignature($signedPayload, self::WEBHOOK_SECRET));
+
+        // Assert
+        $response->assertStatus(400);
+        $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
+        $this->assertDatabaseCount('meeting_quota_transactions', 0);
+    }
+
+    public function test_signature_older_than_tolerance_is_rejected(): void
+    {
+        // Arrange: Stripe SDK は、署名のタイムスタンプが許容時間(300 秒)より古い通知を拒否する
+        $payment = Payment::factory()->pending()->create();
+        $payload = json_encode($this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'), JSON_THROW_ON_ERROR);
+        $timestamp = time() - Webhook::DEFAULT_TOLERANCE - 10;
+
+        // Act
+        $response = $this->postStripeWebhook($payload, $this->stripeSignature($payload, self::WEBHOOK_SECRET, $timestamp));
+
+        // Assert
+        $response->assertStatus(400);
+        $this->assertSame(PaymentStatus::Pending, $payment->refresh()->status);
+    }
+
+    public function test_signature_within_tolerance_is_accepted(): void
+    {
+        // Arrange
+        $payment = Payment::factory()->pending()->create();
+        $payload = json_encode($this->stripeCheckoutEvent('checkout.session.completed', $payment->stripe_checkout_session_id, 'paid'), JSON_THROW_ON_ERROR);
+        $timestamp = time() - Webhook::DEFAULT_TOLERANCE + 10;
+
+        // Act
+        $response = $this->postStripeWebhook($payload, $this->stripeSignature($payload, self::WEBHOOK_SECRET, $timestamp));
+
+        // Assert
+        $response->assertNoContent();
+        $this->assertSame(PaymentStatus::Succeeded, $payment->refresh()->status);
+    }
+
     public function test_unexpected_event_is_ignored(): void
     {
         // Arrange
         $payment = Payment::factory()->pending()->create();
 
         // Act
-        $response = $this->postWebhook($this->event('customer.created', $payment->stripe_checkout_session_id, 'paid'));
+        $response = $this->postWebhook($this->stripeCheckoutEvent('customer.created', $payment->stripe_checkout_session_id, 'paid'));
 
         // Assert
         $response->assertNoContent();
@@ -170,7 +261,7 @@ class StripeWebhookTest extends TestCase
     public function test_unknown_checkout_session_is_ignored(): void
     {
         // Act
-        $response = $this->postWebhook($this->event('checkout.session.completed', 'cs_test_unknown', 'paid'));
+        $response = $this->postWebhook($this->stripeCheckoutEvent('checkout.session.completed', 'cs_test_unknown', 'paid'));
 
         // Assert
         $response->assertNoContent();
@@ -178,46 +269,14 @@ class StripeWebhookTest extends TestCase
     }
 
     /**
-     * Stripe と同じ形式のイベントを組み立てる(決済画面の ID と支払い状態のみ)。
+     * イベントを JSON にして Webhook を送る。署名を省略すると正規の署名を付ける。
      *
-     * @return array<string, mixed>
-     */
-    private function event(string $type, string $checkoutSessionId, string $paymentStatus): array
-    {
-        return [
-            'id' => 'evt_test_'.Str::random(16),
-            'object' => 'event',
-            'type' => $type,
-            'data' => [
-                'object' => [
-                    'id' => $checkoutSessionId,
-                    'object' => 'checkout.session',
-                    'payment_status' => $paymentStatus,
-                ],
-            ],
-        ];
-    }
-
-    /**
-     * Stripe と同じ方法で署名ヘッダーを作る(「タイムスタンプ.本文」の HMAC-SHA256)。
-     */
-    private function sign(string $payload): string
-    {
-        $timestamp = time();
-
-        return 't='.$timestamp.',v1='.hash_hmac('sha256', $timestamp.'.'.$payload, self::WEBHOOK_SECRET);
-    }
-
-    /**
      * @param array<string, mixed> $event
      */
     private function postWebhook(array $event, ?string $signature = null): TestResponse
     {
         $payload = json_encode($event, JSON_THROW_ON_ERROR);
 
-        return $this->call('POST', route('webhooks.stripe'), server: [
-            'CONTENT_TYPE' => 'application/json',
-            'HTTP_STRIPE_SIGNATURE' => $signature ?? $this->sign($payload),
-        ], content: $payload);
+        return $this->postStripeWebhook($payload, $signature ?? $this->stripeSignature($payload, self::WEBHOOK_SECRET));
     }
 }
