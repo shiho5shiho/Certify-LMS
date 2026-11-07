@@ -40,6 +40,7 @@ final class AdminAnnouncementNotification extends BusinessEventNotification
 
     /**
      * MailMessage::line() は改行を空白にまとめてしまうため、本文を 1 行ずつ渡して改行を残す。
+     * u フラグがないと「入」(E5 85 A5)などの途中のバイトを改行とみなして文字が分断されるため、UTF-8 として分割する。
      */
     public function toMail(object $notifiable): MailMessage
     {
@@ -47,7 +48,7 @@ final class AdminAnnouncementNotification extends BusinessEventNotification
             ->subject($this->title())
             ->greeting('Certify LMS をご利用の皆様へ')
             ->line($this->title())
-            ->lines(preg_split('/\R/', $this->message()))
+            ->lines(preg_split('/\R/u', $this->message()))
             ->action('内容を確認する', $this->url())
             ->salutation('Certify LMS 運営チーム');
     }

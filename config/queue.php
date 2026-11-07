@@ -41,7 +41,9 @@ return [
             'table' => 'jobs',
             'queue' => 'default',
             'retry_after' => 90,
-            'after_commit' => false,
+            // トランザクションの中で積まれたジョブは、コミット後にキューへ入れる。
+            // ロールバックされたら積まれないので、取り消されたデータの通知は送られない(T-A-05)
+            'after_commit' => true,
         ],
 
         'beanstalkd' => [
