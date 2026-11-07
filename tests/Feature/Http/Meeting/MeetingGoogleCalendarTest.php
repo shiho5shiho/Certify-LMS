@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\Meeting;
 
 use App\Enums\MeetingStatus;
+use App\Exceptions\Mentoring\GoogleCalendarCredentialRevokedException;
 use App\Exceptions\Mentoring\GoogleCalendarRequestFailedException;
 use App\Models\Certification;
 use App\Models\CoachAvailability;
@@ -96,6 +97,19 @@ class MeetingGoogleCalendarTest extends TestCase
         $this->assertSame(['09:00', '10:00', '11:00'], $slots);
     }
 
+    public function test_availability_treats_revoked_coach_as_unlinked(): void
+    {
+        GoogleCalendarCredential::factory()->forCoach($this->coach)->create();
+        $this->mock(GoogleCalendarServiceContract::class, function (MockInterface $mock) {
+            $mock->shouldReceive('busyIntervals')->once()->andThrow(new GoogleCalendarCredentialRevokedException);
+        });
+
+        $slots = $this->fetchSlotStartTimes();
+
+        // 連携が無効になったコーチは、未連携のコーチと同じく Google の予定を見ずに判定する
+        $this->assertSame(['09:00', '10:00', '11:00'], $slots);
+    }
+
     public function test_store_registers_event_and_saves_event_id(): void
     {
         GoogleCalendarCredential::factory()->forCoach($this->coach)->create();
@@ -144,6 +158,23 @@ class MeetingGoogleCalendarTest extends TestCase
         ]);
     }
 
+    public function test_store_completes_without_event_when_credential_is_revoked(): void
+    {
+        GoogleCalendarCredential::factory()->forCoach($this->coach)->create();
+        $this->mock(GoogleCalendarServiceContract::class, function (MockInterface $mock) {
+            $mock->shouldReceive('busyIntervals')->andReturn([]);
+            $mock->shouldReceive('createEvent')->once()->andThrow(new GoogleCalendarCredentialRevokedException);
+        });
+
+        $this->reserve()->assertSessionHas('success', '面談を予約しました。');
+
+        $this->assertDatabaseHas('meetings', [
+            'coach_id' => $this->coach->id,
+            'status' => MeetingStatus::Reserved->value,
+            'google_event_id' => null,
+        ]);
+    }
+
     public function test_cancel_deletes_registered_event(): void
     {
         GoogleCalendarCredential::factory()->forCoach($this->coach)->create();
@@ -163,6 +194,21 @@ class MeetingGoogleCalendarTest extends TestCase
         $meeting = $this->createReservedMeeting('evt-123');
         $this->mock(GoogleCalendarServiceContract::class, function (MockInterface $mock) {
             $mock->shouldReceive('deleteEvent')->once()->andThrow(new GoogleCalendarRequestFailedException);
+        });
+
+        $this->actingAs($this->student)
+            ->post(route('meetings.cancel', $meeting))
+            ->assertSessionHas('success', '面談をキャンセルしました。面談回数を返却しました。');
+
+        $this->assertSame(MeetingStatus::Canceled, $meeting->fresh()->status);
+    }
+
+    public function test_cancel_completes_when_credential_is_revoked(): void
+    {
+        GoogleCalendarCredential::factory()->forCoach($this->coach)->create();
+        $meeting = $this->createReservedMeeting('evt-123');
+        $this->mock(GoogleCalendarServiceContract::class, function (MockInterface $mock) {
+            $mock->shouldReceive('deleteEvent')->once()->andThrow(new GoogleCalendarCredentialRevokedException);
         });
 
         $this->actingAs($this->student)
