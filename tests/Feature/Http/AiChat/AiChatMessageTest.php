@@ -15,6 +15,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
 use Tests\Support\ContentTestHelpers;
 use Tests\TestCase;
 
@@ -39,7 +40,7 @@ class AiChatMessageTest extends TestCase
     {
         parent::setUp();
 
-        Http::preventStrayRequests();
+        Sleep::fake();
         config([
             'ai-chat.auto_title' => false,
             'ai-chat.daily_limit' => 30,
