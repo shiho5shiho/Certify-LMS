@@ -14,6 +14,8 @@ use App\View\Composers\SectionPageMetaComposer;
 use App\View\Composers\SidebarBadgeComposer;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
+use App\Services\Contracts\StripeServiceContract;
+use App\Services\StripeService;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(GoogleCalendarServiceContract::class, GoogleCalendarService::class);
         $this->app->bind(GeminiServiceContract::class, GeminiService::class);
+        $this->app->bind(StripeServiceContract::class, StripeService::class);
     }
 
     public function boot(): void
