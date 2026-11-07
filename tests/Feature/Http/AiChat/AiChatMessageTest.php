@@ -15,6 +15,8 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Sleep;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Support\ContentTestHelpers;
 use Tests\TestCase;
 
@@ -22,6 +24,7 @@ use Tests\TestCase;
  * AI 相談のメッセージ送信のテスト(同期応答・失敗時のフォールバック・日次上限・AI に渡す文脈と履歴)。
  * Gemini との通信は Http::fake() で差し替える。
  */
+#[Group('external-api')]
 class AiChatMessageTest extends TestCase
 {
     use ContentTestHelpers;
@@ -39,7 +42,7 @@ class AiChatMessageTest extends TestCase
     {
         parent::setUp();
 
-        Http::preventStrayRequests();
+        Sleep::fake();
         config([
             'ai-chat.auto_title' => false,
             'ai-chat.daily_limit' => 30,
@@ -153,6 +156,8 @@ class AiChatMessageTest extends TestCase
     {
         config(['ai-chat.daily_limit' => 2]);
         Http::fake([self::GEMINI_URL => Http::sequence()
+            // 5xx は自動で 1 回だけ再試行されるため、1 回目の送信を失敗させるには 2 回続けて失敗させる
+            ->push(['error' => ['message' => 'high demand']], 503)
             ->push(['error' => ['message' => 'high demand']], 503)
             ->push($this->geminiResponse('回答です。'))
             ->push($this->geminiResponse('翌日の回答です。'))]);
@@ -180,6 +185,26 @@ class AiChatMessageTest extends TestCase
         $this->delete(route('ai-chat.conversations.destroy', $first));
 
         $this->postJson($this->messagesUrl($this->conversation()), ['content' => '質問です'])->assertStatus(429);
+    }
+
+    public function test_retry_after_server_error_counts_as_one_message(): void
+    {
+        config(['ai-chat.daily_limit' => 1]);
+        Http::fake([self::GEMINI_URL => Http::sequence()
+            ->push(['error' => ['message' => 'high demand']], 503)
+            ->push($this->geminiResponse('再試行後の回答です。'))]);
+        $conversation = $this->conversation();
+        $this->actingAs($this->student);
+
+        $this->postJson($this->messagesUrl($conversation), ['content' => '質問'])->assertOk();
+        // 再試行を含めて 1 回と数えるため、上限 1 回なら 2 回目は送れない
+        $this->postJson($this->messagesUrl($conversation), ['content' => '2 回目'])->assertStatus(429);
+
+        Http::assertSentCount(2);
+        $this->assertDatabaseHas('ai_chat_messages', [
+            'content' => '再試行後の回答です。',
+            'status' => AiChatMessageStatus::Completed->value,
+        ]);
     }
 
     public function test_shows_unavailable_message_without_calling_gemini_when_api_key_is_missing(): void

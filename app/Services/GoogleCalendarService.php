@@ -17,6 +17,7 @@ use Google\Service\Calendar\Event;
 use Google\Service\Calendar\FreeBusyRequest;
 use Google\Service\Exception as GoogleServiceException;
 use GuzzleHttp\Client as HttpClient;
+use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 
 /**
@@ -25,6 +26,7 @@ use GuzzleHttp\Exception\GuzzleException;
  * - アクセストークンの期限切れ時は refresh token で更新し、連携情報に保存する
  * - refresh token が無効(invalid_grant)なら連携情報を削除し、GoogleCalendarCredentialRevokedException を投げる
  * - それ以外の通信失敗は GoogleCalendarRequestFailedException に変換する(連携情報は残す)
+ * - テストでは、コンストラクタで通信部品(Guzzle)を差し替えて Google の応答を再現する
  */
 final class GoogleCalendarService implements GoogleCalendarServiceContract
 {
@@ -33,6 +35,14 @@ final class GoogleCalendarService implements GoogleCalendarServiceContract
 
     /** 期限ぎりぎりのトークンで失敗しないよう、この秒数前から期限切れとみなす */
     private const EXPIRY_MARGIN_SECONDS = 60;
+
+    /**
+     * @param ClientInterface|null $httpClient テストで Google の応答を差し替えるための通信部品。
+     *                                         本番では null のまま使い、makeClient() の中で作る
+     */
+    public function __construct(
+        private readonly ?ClientInterface $httpClient = null,
+    ) {}
 
     public function authorizationUrl(string $state): string
     {
@@ -200,7 +210,7 @@ final class GoogleCalendarService implements GoogleCalendarServiceContract
         $client->setPrompt('consent');
         // http_errors を無効にし、Google のエラー応答(invalid_grant など)を例外ではなく配列で受け取る
         // (Google のライブラリが標準で使う HTTP クライアントと同じ設定)
-        $client->setHttpClient(new HttpClient([
+        $client->setHttpClient($this->httpClient ?? new HttpClient([
             'timeout' => self::TIMEOUT_SECONDS,
             'http_errors' => false,
         ]));

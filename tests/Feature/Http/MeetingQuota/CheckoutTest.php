@@ -12,8 +12,10 @@ use App\Models\User;
 use App\Services\Contracts\StripeServiceContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
+#[Group('external-api')]
 class CheckoutTest extends TestCase
 {
     use RefreshDatabase;
