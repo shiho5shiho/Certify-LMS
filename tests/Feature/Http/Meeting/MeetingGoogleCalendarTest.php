@@ -19,12 +19,14 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Mockery\MockInterface;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\TestCase;
 
 /**
  * Google カレンダー連携が、面談の空き枠・予約・キャンセルに反映されることのテスト。
  * Google との通信は GoogleCalendarServiceContract のモックに差し替える。
  */
+#[Group('external-api')]
 class MeetingGoogleCalendarTest extends TestCase
 {
     use RefreshDatabase;

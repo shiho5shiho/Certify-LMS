@@ -16,6 +16,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Sleep;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Support\ContentTestHelpers;
 use Tests\TestCase;
 
@@ -23,6 +24,7 @@ use Tests\TestCase;
  * AI 相談のメッセージ送信のテスト(同期応答・失敗時のフォールバック・日次上限・AI に渡す文脈と履歴)。
  * Gemini との通信は Http::fake() で差し替える。
  */
+#[Group('external-api')]
 class AiChatMessageTest extends TestCase
 {
     use ContentTestHelpers;

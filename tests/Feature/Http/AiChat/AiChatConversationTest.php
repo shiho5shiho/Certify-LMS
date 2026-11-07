@@ -12,6 +12,7 @@ use App\Models\Section;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use PHPUnit\Framework\Attributes\Group;
 use Tests\Support\ContentTestHelpers;
 use Tests\TestCase;
 
@@ -19,6 +20,7 @@ use Tests\TestCase;
  * AI 相談の会話(一覧・作成・表示・タイトル編集・削除)と、アクセス制御のテスト。
  * Gemini との通信は Http::fake() で差し替える。
  */
+#[Group('external-api')]
 class AiChatConversationTest extends TestCase
 {
     use ContentTestHelpers;

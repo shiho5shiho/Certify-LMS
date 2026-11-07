@@ -10,10 +10,12 @@ use App\Models\MeetingQuotaTransaction;
 use App\Models\Payment;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
+use PHPUnit\Framework\Attributes\Group;
 use Stripe\Webhook;
 use Tests\Support\StripeWebhookTestHelpers;
 use Tests\TestCase;
 
+#[Group('external-api')]
 class StripeWebhookTest extends TestCase
 {
     use RefreshDatabase;
