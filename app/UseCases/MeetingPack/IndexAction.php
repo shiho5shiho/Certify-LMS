@@ -19,8 +19,6 @@ final class IndexAction
         ?MeetingPackStatus $status,
         int $perPage = 20,
     ): LengthAwarePaginator {
-        $query = MeetingPack::query()->ordered();
-
         $query = MeetingPack::query()->ordered()->keyword($keyword)->withCount('payments');
 
         if ($status !== null) {
