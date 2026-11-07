@@ -34,7 +34,6 @@ class AiChatConversationTest extends TestCase
     {
         parent::setUp();
 
-        Http::preventStrayRequests();
         config(['ai-chat.auto_title' => false]);
 
         $this->student = User::factory()->student()->inProgress()->create();

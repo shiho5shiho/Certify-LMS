@@ -16,8 +16,9 @@ use Illuminate\Support\Facades\Log;
  * Gemini API(generateContent)を呼び出す GeminiServiceContract の実装。
  *
  * - API キーは公式ドキュメントのとおり x-goog-api-key ヘッダーで渡す
- * - タイムアウト(config: ai-chat.gemini.timeout)や Gemini 側のエラー応答はGeminiRequestFailedException に変換する
+ * - タイムアウト(config: ai-chat.gemini.timeout)や Gemini 側のエラー応答は GeminiRequestFailedException に変換する
  * - 5xx 系のエラーのときだけ、1 秒後に 1 回だけ再試行する(429・4xx・タイムアウトは再試行しない)
+ * - 思考過程(thought)の部分は除き、応答本文のテキストのみを返す
  */
 final class GeminiService implements GeminiServiceContract
 {

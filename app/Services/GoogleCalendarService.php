@@ -17,8 +17,8 @@ use Google\Service\Calendar\Event;
 use Google\Service\Calendar\FreeBusyRequest;
 use Google\Service\Exception as GoogleServiceException;
 use GuzzleHttp\Client as HttpClient;
-use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\ClientInterface;
+use GuzzleHttp\Exception\GuzzleException;
 
 /**
  * Google Calendar API を呼び出す GoogleCalendarServiceContract の実装。
@@ -38,7 +38,7 @@ final class GoogleCalendarService implements GoogleCalendarServiceContract
 
     /**
      * @param ClientInterface|null $httpClient テストで Google の応答を差し替えるための通信部品。
-     *                                          本番では null のまま使い、makeClient() の中で作る
+     *                                         本番では null のまま使い、makeClient() の中で作る
      */
     public function __construct(
         private readonly ?ClientInterface $httpClient = null,
@@ -214,6 +214,7 @@ final class GoogleCalendarService implements GoogleCalendarServiceContract
             'timeout' => self::TIMEOUT_SECONDS,
             'http_errors' => false,
         ]));
+
         return $client;
     }
 }
