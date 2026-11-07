@@ -7,13 +7,17 @@ namespace Tests\Feature\UseCases\Enrollment;
 use App\Enums\EnrollmentStatus;
 use App\Exceptions\Enrollment\CompletionNotEligibleException;
 use App\Exceptions\Enrollment\EnrollmentNotLearningException;
+use App\Models\Certificate;
 use App\Models\Certification;
 use App\Models\Enrollment;
 use App\Models\MockExam;
 use App\Models\MockExamSession;
 use App\Models\User;
+use App\Services\CertificatePdfService;
 use App\UseCases\Enrollment\ReceiveCertificateAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 /**
@@ -26,6 +30,8 @@ class ReceiveCertificateActionTest extends TestCase
 
     public function test_successfully_issues_certificate_and_records_status_log_when_all_published_exams_passed(): void
     {
+        Storage::fake('private');
+
         $student = User::factory()->student()->inProgress()->create();
         $certification = Certification::factory()->published()->create();
         $enrollment = Enrollment::factory()->for($student)->for($certification)->learning()->create();
@@ -48,6 +54,7 @@ class ReceiveCertificateActionTest extends TestCase
             'changed_by_user_id' => $student->id,
             'changed_reason' => '受講生による修了証受領',
         ]);
+        Storage::disk('private')->assertExists($certificate->pdf_path);
     }
 
     public function test_throws_when_not_eligible_due_to_unpassed_exam(): void
@@ -104,5 +111,44 @@ class ReceiveCertificateActionTest extends TestCase
 
         $this->assertDatabaseCount('certificates', 0);
         $this->assertSame(EnrollmentStatus::Learning, $enrollment->refresh()->status);
+    }
+
+    public function test_rolls_back_and_deletes_pdf_when_pdf_generation_fails(): void
+    {
+        Storage::fake('private');
+        $student = User::factory()->student()->inProgress()->create();
+        $certification = Certification::factory()->published()->create();
+        $enrollment = Enrollment::factory()->for($student)->for($certification)->learning()->create();
+        $exam = MockExam::factory()->for($certification)->create(['is_published' => true]);
+        MockExamSession::factory()->for($enrollment)->for($exam)->create(['pass' => true]);
+
+        // 途中まで保存した後に失敗するケースを再現する
+        $pdfPath = null;
+        $pdfService = Mockery::mock(CertificatePdfService::class);
+        $pdfService->shouldReceive('generate')->once()->andReturnUsing(function (Certificate $certificate) use (&$pdfPath) {
+            $pdfPath = $certificate->pdf_path;
+            Storage::disk('private')->put($pdfPath, 'partial');
+            throw new \RuntimeException('PDF 生成失敗');
+        });
+        $this->app->instance(CertificatePdfService::class, $pdfService);
+
+        try {
+            app(ReceiveCertificateAction::class)($enrollment);
+            $this->fail('例外が発生しませんでした。');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('PDF 生成失敗', $e->getMessage());
+        }
+
+        $this->assertDatabaseMissing('certificates', ['enrollment_id' => $enrollment->id]);
+        $this->assertDatabaseHas('enrollments', [
+            'id' => $enrollment->id,
+            'status' => EnrollmentStatus::Learning->value,
+            'passed_at' => null,
+        ]);
+        $this->assertDatabaseMissing('enrollment_status_logs', [
+            'enrollment_id' => $enrollment->id,
+            'to_status' => EnrollmentStatus::Passed->value,
+        ]);
+        Storage::disk('private')->assertMissing($pdfPath);
     }
 }
