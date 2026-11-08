@@ -135,4 +135,63 @@ class GradeActionTest extends TestCase
         // 1/3 = 33.33% — 50% 未満で不合格
         $this->assertFalse($session->pass);
     }
+
+    public function test_grades_four_of_five_correct_as_80_percent_and_pass(): void
+    {
+        $session = $this->createSessionWithAnswers(correctCount: 4, totalQuestions: 5, passingScore: 60);
+
+        (app(GradeAction::class))($session);
+
+        $session->refresh();
+        $this->assertSame(4, $session->total_correct);
+        $this->assertEquals(80.00, (float) $session->score_percentage);
+        $this->assertTrue($session->pass);
+    }
+
+    public function test_grades_all_correct_as_100_percent_and_pass(): void
+    {
+        $session = $this->createSessionWithAnswers(correctCount: 5, totalQuestions: 5, passingScore: 60);
+
+        (app(GradeAction::class))($session);
+
+        $session->refresh();
+        $this->assertSame(5, $session->total_correct);
+        $this->assertEquals(100.00, (float) $session->score_percentage);
+        $this->assertTrue($session->pass);
+    }
+
+    private function createSessionWithAnswers(int $correctCount, int $totalQuestions, int $passingScore): MockExamSession
+    {
+        $mockExam = MockExam::factory()->published()->passingScore($passingScore)->create();
+        $questions = collect();
+        for ($i = 0; $i < $totalQuestions; $i++) {
+            $questions->push(MockExamQuestion::factory()->forMockExam($mockExam)->withOptions(4, 0)->create(['order' => $i]));
+        }
+
+        $session = MockExamSession::factory()
+            ->forMockExam($mockExam)
+            ->inProgress()
+            ->create([
+                'generated_question_ids' => $questions->pluck('id')->all(),
+                'total_questions' => $totalQuestions,
+                'passing_score_snapshot' => $passingScore,
+            ]);
+
+        foreach ($questions as $index => $question) {
+            $selected = $index < $correctCount
+                ? $question->options->firstWhere('is_correct', true)
+                : $question->options->firstWhere('is_correct', false);
+
+            MockExamAnswer::factory()->create([
+                'mock_exam_session_id' => $session->id,
+                'mock_exam_question_id' => $question->id,
+                'selected_option_id' => $selected->id,
+                'selected_option_body' => $selected->body,
+                'is_correct' => false,
+                'answered_at' => now(),
+            ]);
+        }
+
+        return $session;
+    }
 }
