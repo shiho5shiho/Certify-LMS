@@ -57,7 +57,7 @@ class IndexTest extends TestCase
         $response->assertDontSee('Other Cert');
     }
 
-        public function test_coach_cannot_see_unassigned_certification_enrollments_with_certification_filter(): void
+    public function test_coach_cannot_see_unassigned_certification_enrollments_with_certification_filter(): void
     {
         // Arrange
         $admin = User::factory()->admin()->create();

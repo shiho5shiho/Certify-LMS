@@ -24,7 +24,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-         Schema::table('meetings', function (Blueprint $table) {
+        Schema::table('meetings', function (Blueprint $table) {
             // UNIQUE が外部キー coach_id の INDEX を兼ねている場合があるため、外部キーを外してから削除し、付け直す
             $table->dropForeign(['coach_id']);
             $table->dropUnique(['coach_id', 'scheduled_at']);
