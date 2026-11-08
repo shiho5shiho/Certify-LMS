@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
  * Enrollment 状態遷移の監査ログ(`EnrollmentStatusLog`)を INSERT する Service。
  *
  * 呼出側 Action がトランザクション内で recordStatusChange() を呼ぶ前提。本 Service 自体は
- * DB::transaction() を持たない(`backend-services.md` の規約準拠、ステートレス INSERT only)。
+ * DB::transaction() を持たない(`backend-services.md` の規約準拠、ステートレス、INSERT とキャッシュ削除のみ)。
  *
  * `final` 不採用: Mockery で recordStatusChange を mock してトランザクション原子性の rollback 検証を
  * Action テストで行う可能性があるため(`UserStatusChangeService` と同じ判断軸)。
