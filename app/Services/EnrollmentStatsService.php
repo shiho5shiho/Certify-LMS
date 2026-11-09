@@ -7,11 +7,14 @@ namespace App\Services;
 use App\Enums\EnrollmentStatus;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 
 /**
  * Enrollment 集計を提供する Service。admin ダッシュボード KPI で利用される。
  *
  * 全体 KPI(adminKpi)と資格別修了率(completionRateByCertification)は全 enrollment を走査する重い集計。
+ * そのため両メソッドは結果を config('dashboard.*') のキーで保存時間の間キャッシュする
+ * (受講状態の遷移時に EnrollmentStatusChangeService で削除される)。
  *
  * 集計対象は SoftDelete 除外。paused 集計は採用しない(3 値モデル)。
  * 受講生ダッシュボードの Action / Controller テストで Mockery 経由 mock するため `final` は付けない。
@@ -23,26 +26,32 @@ class EnrollmentStatsService
      *
      * @return array{learning_count: int, passed_count: int, failed_count: int, total: int, by_certification: array<int, array{certification_id: string, certification_name: string, learning: int, passed: int, failed: int, total: int}>}
      */
-    public function adminKpi(): array
+        public function adminKpi(): array
     {
-        $counts = DB::table('enrollments')
-            ->whereNull('deleted_at')
-            ->selectRaw('status, COUNT(*) as cnt')
-            ->groupBy('status')
-            ->pluck('cnt', 'status')
-            ->all();
+        return Cache::remember(
+            config('dashboard.admin_kpi_cache_key'),
+            (int) config('dashboard.admin_cache_ttl'),
+            function (): array {
+                $counts = DB::table('enrollments')
+                    ->whereNull('deleted_at')
+                    ->selectRaw('status, COUNT(*) as cnt')
+                    ->groupBy('status')
+                    ->pluck('cnt', 'status')
+                    ->all();
 
-        $learning = (int) ($counts[EnrollmentStatus::Learning->value] ?? 0);
-        $passed = (int) ($counts[EnrollmentStatus::Passed->value] ?? 0);
-        $failed = (int) ($counts[EnrollmentStatus::Failed->value] ?? 0);
+                $learning = (int) ($counts[EnrollmentStatus::Learning->value] ?? 0);
+                $passed = (int) ($counts[EnrollmentStatus::Passed->value] ?? 0);
+                $failed = (int) ($counts[EnrollmentStatus::Failed->value] ?? 0);
 
-        return [
-            'learning_count' => $learning,
-            'passed_count' => $passed,
-            'failed_count' => $failed,
-            'total' => $learning + $passed + $failed,
-            'by_certification' => $this->byCertification(),
-        ];
+                return [
+                    'learning_count' => $learning,
+                    'passed_count' => $passed,
+                    'failed_count' => $failed,
+                    'total' => $learning + $passed + $failed,
+                    'by_certification' => $this->byCertification(),
+                ];
+            },
+        );
     }
 
     /**
@@ -75,17 +84,21 @@ class EnrollmentStatsService
      *
      * @return Collection<int, array{certification_id: string, certification_name: string, learning: int, passed: int, failed: int, total: int, completion_rate: float}>
      */
-    public function completionRateByCertification(): Collection
+        public function completionRateByCertification(): Collection
     {
-        return collect($this->byCertification())
-            ->filter(fn (array $row): bool => $row['total'] > 0)
-            ->map(function (array $row): array {
-                $row['completion_rate'] = round($row['passed'] / $row['total'], 4);
+        return Cache::remember(
+            config('dashboard.admin_completion_rate_cache_key'),
+            (int) config('dashboard.admin_cache_ttl'),
+            fn (): Collection => collect($this->byCertification())
+                ->filter(fn (array $row): bool => $row['total'] > 0)
+                ->map(function (array $row): array {
+                    $row['completion_rate'] = round($row['passed'] / $row['total'], 4);
 
-                return $row;
-            })
-            ->sortByDesc('total')
-            ->values();
+                    return $row;
+                })
+                ->sortByDesc('total')
+                ->values(),
+        );
     }
 
     /**
