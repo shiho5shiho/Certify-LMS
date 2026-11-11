@@ -49,7 +49,7 @@ final class SendMessageAction
     {
         $conversation->loadMissing('user');
 
-        // API キー未設定: Gemini を呼ばず、回数にも数えず、利用できない旨を AI 側のエラーとして残す(PM 確認 Q5・Q7)
+        // API キー未設定: Gemini を呼ばず、回数にも数えず、利用できない旨を AI 側のエラーとして残す
         // 提供済み JS は status=error の AI メッセージの content をそのまま表示するため、JS を変更せずに案内できる
         if ($this->isUnavailable()) {
             [$question, $answer] = $this->saveExchange($conversation, $content);
@@ -66,7 +66,7 @@ final class SendMessageAction
 
         [$question, $answer] = $this->saveExchange($conversation, $content);
 
-        // AI 応答の成否にかかわらず数える(PM 確認 Q1)
+        // AI 応答の成否にかかわらず数える
         $this->limiter->hit($conversation->user);
 
         $prompt = $this->promptBuilder->build($conversation, $question);

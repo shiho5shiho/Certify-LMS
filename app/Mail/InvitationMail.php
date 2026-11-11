@@ -14,7 +14,7 @@ use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * 招待メール。キュー経由で送る(T-A-05、PM 確認済)。
+ * 招待メール。キュー経由で送る。
  * リトライ回数・待機間隔は業務通知(BusinessEventNotification)と揃える。
  */
 class InvitationMail extends Mailable implements ShouldQueue

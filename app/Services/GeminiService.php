@@ -22,10 +22,10 @@ use Illuminate\Support\Facades\Log;
  */
 final class GeminiService implements GeminiServiceContract
 {
-    /** 再試行を含めた最大の送信回数(1 回目 + 再試行 1 回)(PM 確認 Q4) */
+    /** 再試行を含めた最大の送信回数(1 回目 + 再試行 1 回) */
     private const MAX_ATTEMPTS = 2;
 
-    /** 再試行までの待ち時間(ミリ秒)(PM 確認 Q4) */
+    /** 再試行までの待ち時間(ミリ秒) */
     private const RETRY_DELAY_MS = 1000;
 
     public function generate(string $systemInstruction, array $contents): GeminiResponse
@@ -46,7 +46,7 @@ final class GeminiService implements GeminiServiceContract
                 ->retry(
                     self::MAX_ATTEMPTS,
                     fn (int $attempt, ?Exception $e = null) => $this->logRetry($attempt, $e),
-                    // 5xx 系のときだけ再試行する。429・4xx・タイムアウトは再試行しない(PM 確認 Q3)
+                    // 5xx 系のときだけ再試行する。429・4xx・タイムアウトは再試行しない
                     fn (Exception $e) => $e instanceof RequestException && $e->response->serverError(),
                     // 再試行しても失敗したときは例外にせず、これまでどおり下の failed() の分岐でエラーにする
                     throw: false,
@@ -97,7 +97,7 @@ final class GeminiService implements GeminiServiceContract
      * 再試行したことを AI チャットのログに残し、再試行までの待ち時間を返す。
      *
      * Laravel の retry() は、実際に再試行するときだけ待ち時間を問い合わせるため、ここでログを書く。
-     * 既存の失敗ログ(SendMessageAction)とは文面・レベルを分ける(PM 確認 Q4)。
+     * 既存の失敗ログ(SendMessageAction)とは文面・レベルを分ける。
      */
     private function logRetry(int $attempt, ?Exception $e): int
     {

@@ -145,7 +145,7 @@ final class MeetingAvailabilityService
 
         $busyIntervals = $this->googleBusyIntervals($coach, $slotStart);
 
-        // 取得失敗を「予定なし」と扱うとダブルブッキングにつながるため、予約不可とする(PM 確認 Q1)
+        // 取得失敗を「予定なし」と扱うとダブルブッキングにつながるため、予約不可とする
         if ($busyIntervals === null) {
             return true;
         }
@@ -181,7 +181,7 @@ final class MeetingAvailabilityService
                 $date->copy()->addDay()->startOfDay(),
             );
         } catch (GoogleCalendarCredentialRevokedException) {
-            // 連携は削除済み。未連携のコーチとして従来どおりの判定にする(PM 確認 Q3)
+            // 連携は削除済み。未連携のコーチとして従来どおりの判定にする
             $busyIntervals = [];
         } catch (GoogleCalendarRequestFailedException $e) {
             Log::warning('Google カレンダーの予定あり時間を取得できませんでした。', [

@@ -9,7 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * 個人目標の追加リクエスト。受講生本人のみ通過する。
- * 目標期日は任意で、過去の日付も許容する(PM 確認済)。
+ * 目標期日は任意で、過去の日付も許容する。
  */
 class StoreRequest extends FormRequest
 {

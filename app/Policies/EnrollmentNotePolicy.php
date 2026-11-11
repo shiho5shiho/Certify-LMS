@@ -14,7 +14,7 @@ use App\Models\User;
  *
  * - viewAny / create: 当該資格の担当コーチ / admin(受講生は本人であっても不可)
  * - update / delete: 作成者本人(かつ現在も担当コーチ) / admin
- * - 受講解除(論理削除)済みの受講登録では、閲覧・操作とも不可(メモのデータは保持する。PM 確認済)
+ * - 受講解除(論理削除)済みの受講登録では、閲覧・操作とも不可(メモのデータは保持する)
  *
  * 担当コーチの判定は EnrollmentPolicy::view(certification.coaches 経由)を再利用する。
  */

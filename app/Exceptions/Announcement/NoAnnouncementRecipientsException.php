@@ -8,7 +8,7 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 
 /**
  * 配信対象の受講生が 0 人のときにお知らせを配信しようとした際の例外(HTTP 422)。
- * `Announcement\StoreAction` が throw し、配信履歴は作らない(PM 確認済)。
+ * `Announcement\StoreAction` が throw し、配信履歴は作らない。
  * Handler がフォームへ戻して Flash error で表示する。
  */
 final class NoAnnouncementRecipientsException extends UnprocessableEntityHttpException

@@ -18,7 +18,7 @@ use Tests\TestCase;
 
 /**
  * 通知・招待メールがその場で送られず、キューに積まれること、
- * リトライ回数と待機間隔が PM 確認どおりであることを検証する。
+ * リトライ回数(最大 3 回)と待機間隔(10 秒 → 1 分 → 5 分)を検証する。
  */
 class NotificationQueueTest extends TestCase
 {

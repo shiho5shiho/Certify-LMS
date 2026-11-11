@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * 受講登録単位のコーチメモ(業務記録)。削除は物理削除で履歴は残さない。
- * 受講解除(論理削除)ではメモを残し、画面での表示・操作を Policy で止める(PM 確認済)。
+ * 受講解除(論理削除)ではメモを残し、画面での表示・操作を Policy で止める。
  * 親 Enrollment が物理削除された場合は連動して削除する。
  */
 return new class extends Migration

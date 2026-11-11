@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
- * Gemini の API キーが未設定のため、AI 相談を利用できない場合の例外(PM 確認 Q5)。
+ * Gemini の API キーが未設定のため、AI 相談を利用できない場合の例外。
  *
  * Gemini へのリクエストは行わない。JSON(ウィジェット / フル画面の送信)は 503、
  * 画面のフォーム送信(新しい相談モーダル)は直前の画面へ戻してトーストで案内する。

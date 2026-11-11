@@ -34,7 +34,7 @@ final class CreateCheckoutAction
             $meetingPack,
             // {CHECKOUT_SESSION_ID} は Stripe が実際の ID に置き換える。route() のパラメータに渡すと { } がエンコードされるため、文字列で連結する
             route('meeting-quota.checkout.success').'?session_id={CHECKOUT_SESSION_ID}',
-            // 決済画面でキャンセルした場合はダッシュボードへ戻す(PM 確認 Q3)
+            // 決済画面でキャンセルした場合はダッシュボードへ戻す
             route('dashboard.index'),
         );
 

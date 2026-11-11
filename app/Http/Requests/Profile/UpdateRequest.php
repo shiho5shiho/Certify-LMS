@@ -30,7 +30,7 @@ class UpdateRequest extends FormRequest
         ];
 
         if ($this->user()?->role === UserRole::Coach) {
-            // 招待時(OnboardingRequest)と同じ条件。空欄での保存は不可(PM 確認済)
+            // 招待時(OnboardingRequest)と同じ条件。空欄での保存は不可
             $rules['meeting_url'] = ['required', 'string', 'url', 'max:500'];
         }
 

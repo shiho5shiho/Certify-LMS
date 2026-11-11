@@ -8,7 +8,7 @@ use App\Models\EnrollmentGoal;
 
 /**
  * 個人目標を達成済にする。
- * 既に達成済の場合はエラーにせず、最初の達成日時を保持する(PM 確認済)。
+ * 既に達成済の場合はエラーにせず、最初の達成日時を保持する。
  */
 final class MarkAchievedAction
 {
