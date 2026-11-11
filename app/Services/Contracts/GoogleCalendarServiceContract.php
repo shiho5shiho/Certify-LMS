@@ -14,7 +14,7 @@ use Carbon\Carbon;
  * コーチの Google カレンダーとの通信(OAuth 認可 / 予定あり時間の取得 / 予定の登録・削除)の契約。
  *
  * Google API の呼び出しはすべてこの契約の実装に閉じ込める。
- * テスト(T-A-04)ではこの契約をモックに差し替えて、外部通信なしで検証する。
+ * テストではこの契約をモックに差し替えて、外部通信なしで検証する。
  */
 interface GoogleCalendarServiceContract
 {

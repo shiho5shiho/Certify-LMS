@@ -9,7 +9,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\RateLimiter;
 
 /**
- * AI 相談の 1 日の送信回数を数える(PM 確認 Q1)。
+ * AI 相談の 1 日の送信回数を数える。
  *
  * - 上限は config: ai-chat.daily_limit。日付の区切りはアプリのタイムゾーン(Asia/Tokyo)の 0:00
  * - AI 応答に失敗した送信も数える。タイトル自動生成のための呼び出しは数えない

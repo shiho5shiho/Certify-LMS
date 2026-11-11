@@ -17,7 +17,7 @@ use Illuminate\Notifications\Notification;
  * 保存するキー(notification_type / title / message / url)は notifications/_partials/notification-row.blade.php が読む形に合わせる。
  *
  * 送信はキュー経由で行う(ShouldQueue)。worker が「受信者 × チャネル」ごとに 1 ジョブずつ送るため、1 件の送信失敗がほかの受信者・チャネルに影響しない。
- * 一時的な失敗は 10 秒 → 1 分 → 5 分の間隔で最大 3 回リトライし、それでも失敗したら failed_jobs に記録する(PM 確認済)。
+ * 一時的な失敗は 10 秒 → 1 分 → 5 分の間隔で最大 3 回リトライし、それでも失敗したら failed_jobs に記録する。
  */
 abstract class BusinessEventNotification extends Notification implements ShouldQueue
 {

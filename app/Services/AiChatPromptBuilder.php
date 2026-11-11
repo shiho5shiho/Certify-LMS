@@ -15,8 +15,8 @@ use App\Models\Section;
  * Gemini に渡すシステムへの指示(資格・教材の文脈)と、会話の履歴を組み立てる。
  *
  * - 資格: 教材から開いた会話は教材の資格、それ以外は会話の受講登録 → 既定の受講登録(learning / passed のみ)
- * - 教材: タイトルと本文。本文が上限文字数を超える場合は先頭部分と本文全体の見出し一覧を渡す(PM 確認 Q3)
- * - 履歴: 直近 N 件(config: ai-chat.history_limit)。エラーになったやり取りは、その直前の質問ごと除く(PM 確認 Q2)
+ * - 教材: タイトルと本文。本文が上限文字数を超える場合は先頭部分と本文全体の見出し一覧を渡す
+ * - 履歴: 直近 N 件(config: ai-chat.history_limit)。エラーになったやり取りは、その直前の質問ごと除く
  */
 final class AiChatPromptBuilder
 {
@@ -82,7 +82,7 @@ final class AiChatPromptBuilder
             return "本文:\n{$body}";
         }
 
-        // 後半に回答に必要な情報がある場合に備え、本文全体の見出し一覧を添える(PM 確認 Q3)
+        // 後半に回答に必要な情報がある場合に備え、本文全体の見出し一覧を添える
         $headings = collect(preg_split('/\R/u', $body))
             ->filter(fn (string $line) => preg_match('/^#{1,6}\s+\S/u', $line) === 1)
             ->implode("\n");

@@ -11,7 +11,7 @@ use App\Services\GeminiResponse;
  * Gemini API との通信の契約。
  *
  * Gemini の呼び出しはすべてこの契約の実装に閉じ込める。
- * テスト(T-A-04)ではこの契約をモックに差し替えて、外部通信なしで検証する。
+ * テストではこの契約をモックに差し替えて、外部通信なしで検証する。
  */
 interface GeminiServiceContract
 {

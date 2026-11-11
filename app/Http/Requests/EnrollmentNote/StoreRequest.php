@@ -9,7 +9,7 @@ use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * 受講生メモの追加リクエスト。担当コーチ / admin のみ通過する。
- * 本文の上限 2000 文字は提供済み Blade の maxlength に合わせる。項目名は「本文」(PM 確認済)。
+ * 本文の上限 2000 文字は提供済み Blade の maxlength に合わせる。項目名は「本文」。
  */
 class StoreRequest extends FormRequest
 {

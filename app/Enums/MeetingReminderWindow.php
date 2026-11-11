@@ -13,7 +13,7 @@ enum MeetingReminderWindow: string
     case OneHourBefore = 'one_hour_before';
 
     /**
-     * 通知のタイトル(PM 確認済み)。
+     * 通知のタイトル。
      */
     public function title(): string
     {

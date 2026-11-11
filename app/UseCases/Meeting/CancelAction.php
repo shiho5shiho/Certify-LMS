@@ -59,7 +59,7 @@ final class CancelAction
                 $meeting->refresh()->load(['coach.googleCredential', 'student', 'enrollment.certification']);
 
                 ($this->deleteEvent)($meeting);
-                // 面談キャンセルは例外として、担当解除後でもその面談のコーチに通知する(PM 確認済み)
+                // 面談キャンセルは例外として、担当解除後でもその面談のコーチに通知する
                 $this->notifier->send(
                     [$meeting->coach, $meeting->student],
                     $actor,

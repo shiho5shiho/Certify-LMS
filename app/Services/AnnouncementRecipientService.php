@@ -14,7 +14,7 @@ use Illuminate\Support\Collection;
  * 管理者お知らせの配信対象タイプから、受信者の候補を集める Service。
  *
  * - 全受講生: 受講生ロールの全ユーザー
- * - 資格指定: その資格を「学習中」の受講登録を持つ受講生(修了・学習中止・受講解除は除く、PM 確認済)
+ * - 資格指定: その資格を「学習中」の受講登録を持つ受講生(修了・学習中止・受講解除は除く)
  * - ユーザー指定: 指定した 1 名
  *
  * 受講中(in_progress)以外の除外は NotificationDispatchService::filterRecipients() の共通ルールに任せる。

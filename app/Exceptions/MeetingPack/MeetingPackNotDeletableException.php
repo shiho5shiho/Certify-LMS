@@ -10,7 +10,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
  * 削除条件を満たさない面談パックを削除しようとした際の例外（HTTP 409）。
  * `MeetingPack\DestroyAction` が「公開中でなければ削除可」のドメインルールから throw する。
  *
- * 購入記録がある面談パックの削除不可は、`MeetingPackHasPaymentsException` で扱う(S-A-03)。
+ * 購入記録がある面談パックの削除不可は、`MeetingPackHasPaymentsException` で扱う。
  */
 final class MeetingPackNotDeletableException extends ConflictHttpException
 {

@@ -19,8 +19,8 @@ use Stripe\Webhook;
 /**
  * Stripe API を呼び出す StripeServiceContract の実装。
  *
- * - 価格は Stripe の Price ID を使わず、面談パックの名前と価格をその都度渡す(PM 確認 Q1)
- * - 支払い方法は指定せず、Stripe 側で設定されている決済方法を使う(PM 確認 Q2)
+ * - 価格は Stripe の Price ID を使わず、面談パックの名前と価格をその都度渡す
+ * - 支払い方法は指定せず、Stripe 側で設定されている決済方法を使う
  * - 通信の失敗は StripeRequestFailedException に変換する
  * - Webhook は署名シークレットで署名を検証し、検証できない場合は InvalidStripeWebhookException を投げる
  */

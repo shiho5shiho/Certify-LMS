@@ -63,7 +63,7 @@ final class GoogleCalendarService implements GoogleCalendarServiceContract
                 throw new GoogleCalendarRequestFailedException('認可コードをトークンに交換できませんでした。');
             }
 
-            // calendar_id はメールアドレスと決めつけず、メインカレンダーの実際の ID を取得する(PM 確認 Q6)
+            // calendar_id はメールアドレスと決めつけず、メインカレンダーの実際の ID を取得する
             $calendarId = (new Calendar($client))->calendars->get('primary')->getId();
         } catch (GoogleException|GuzzleException $e) {
             throw new GoogleCalendarRequestFailedException(previous: $e);
@@ -179,7 +179,7 @@ final class GoogleCalendarService implements GoogleCalendarServiceContract
 
         $token = $this->makeClient()->fetchAccessTokenWithRefreshToken($credential->refresh_token);
 
-        // 一時的な通信エラーと区別し、認証情報の無効が確認できたときだけ未連携に戻す(PM 確認 Q3)
+        // 一時的な通信エラーと区別し、認証情報の無効が確認できたときだけ未連携に戻す
         if (($token['error'] ?? null) === 'invalid_grant') {
             $credential->delete();
 

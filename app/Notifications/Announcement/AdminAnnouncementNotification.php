@@ -12,7 +12,7 @@ use Illuminate\Notifications\Messages\MailMessage;
  * 管理者お知らせの通知。配信対象の受講生に送る。
  *
  * - 移動先は通知詳細ページ(notifications.show)。お知らせには遷移先の業務画面がないため
- * - メールには本文全文を載せる(PM 確認済)
+ * - メールには本文全文を載せる
  */
 final class AdminAnnouncementNotification extends BusinessEventNotification
 {

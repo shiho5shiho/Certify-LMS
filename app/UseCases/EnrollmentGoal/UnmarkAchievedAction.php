@@ -8,7 +8,7 @@ use App\Models\EnrollmentGoal;
 
 /**
  * 個人目標を未達成に戻す。
- * 既に未達成の場合はエラーにせず、そのまま正常終了する(PM 確認済)。
+ * 既に未達成の場合はエラーにせず、そのまま正常終了する。
  */
 final class UnmarkAchievedAction
 {

@@ -145,7 +145,7 @@ class AiChatController extends Controller
     }
 
     /**
-     * API キー未設定の環境では、画面を開いたときにトーストで案内する(PM 確認 Q5)。
+     * API キー未設定の環境では、画面を開いたときにトーストで案内する。
      * リダイレクトせずに画面を返すため、今回の表示だけに出す session()->now() を使う。
      */
     private function noticeIfUnavailable(): void
