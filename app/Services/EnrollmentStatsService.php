@@ -6,8 +6,8 @@ namespace App\Services;
 
 use App\Enums\EnrollmentStatus;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Enrollment 集計を提供する Service。admin ダッシュボード KPI で利用される。
@@ -26,7 +26,7 @@ class EnrollmentStatsService
      *
      * @return array{learning_count: int, passed_count: int, failed_count: int, total: int, by_certification: array<int, array{certification_id: string, certification_name: string, learning: int, passed: int, failed: int, total: int}>}
      */
-        public function adminKpi(): array
+    public function adminKpi(): array
     {
         return Cache::remember(
             config('dashboard.admin_kpi_cache_key'),
@@ -84,7 +84,7 @@ class EnrollmentStatsService
      *
      * @return Collection<int, array{certification_id: string, certification_name: string, learning: int, passed: int, failed: int, total: int, completion_rate: float}>
      */
-        public function completionRateByCertification(): Collection
+    public function completionRateByCertification(): Collection
     {
         return Cache::remember(
             config('dashboard.admin_completion_rate_cache_key'),
