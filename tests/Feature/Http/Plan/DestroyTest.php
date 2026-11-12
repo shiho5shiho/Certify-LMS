@@ -6,6 +6,7 @@ namespace Tests\Feature\Http\Plan;
 
 use App\Models\Plan;
 use App\Models\User;
+use App\Models\UserPlanLog;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -56,7 +57,7 @@ class DestroyTest extends TestCase
     }
 
     /**
-     * Q1のPM回答: 判定は現在の User.plan_id の紐づきのみを見る。
+     * 判定は現在の User.plan_id の紐づきで行う。
      */
     public function test_cannot_delete_draft_plan_with_user_attached(): void
     {
@@ -70,6 +71,45 @@ class DestroyTest extends TestCase
 
         // Assert
         $response->assertStatus(409);
+        $this->assertDatabaseHas('plans', ['id' => $plan->id]);
+    }
+
+    public function test_cannot_delete_draft_plan_with_withdrawn_user(): void
+    {
+        // Arrange
+        $admin = User::factory()->admin()->create();
+        $plan = Plan::factory()->draft()->create();
+        User::factory()->student()->withdrawn()->create(['plan_id' => $plan->id])->delete();
+
+        // Act
+        $response = $this->actingAs($admin)
+            ->from(route('admin.plans.show', $plan))
+            ->delete(route('admin.plans.destroy', $plan));
+
+        // Assert
+        $response->assertRedirect(route('admin.plans.show', $plan));
+        $response->assertSessionHas('error', 'このプランを削除できません。下書き かつ 受講者が紐づいていない場合のみ削除可能です。');
+        $this->assertDatabaseHas('plans', ['id' => $plan->id]);
+    }
+
+    public function test_cannot_delete_draft_plan_with_plan_history(): void
+    {
+        // Arrange
+        $admin = User::factory()->admin()->create();
+        $plan = Plan::factory()->draft()->create();
+        $student = User::factory()->student()->create([
+            'plan_id' => Plan::factory()->published()->create()->id,
+        ]);
+        UserPlanLog::factory()->for($plan)->for($student)->create();
+
+        // Act
+        $response = $this->actingAs($admin)
+            ->from(route('admin.plans.show', $plan))
+            ->delete(route('admin.plans.destroy', $plan));
+
+        // Assert
+        $response->assertRedirect(route('admin.plans.show', $plan));
+        $response->assertSessionHas('error', 'このプランを削除できません。下書き かつ 受講者が紐づいていない場合のみ削除可能です。');
         $this->assertDatabaseHas('plans', ['id' => $plan->id]);
     }
 
