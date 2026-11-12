@@ -12,20 +12,20 @@ use Illuminate\Support\Facades\DB;
 /**
  * プランを物理削除するユースケース。下書き かつ 受講者が紐づいていない場合のみ削除可能。
  *
- * NOTE: 判定は現在の User.plan_id の紐づきのみを見る。過去に user_plan_logs へ履歴が
- * 残っていても、現在の紐づきが無ければ削除可。
- * DB側の user_plan_logs.plan_id には restrictOnDelete() が付いているため、
- * 万一「現在の紐づきは無いが過去履歴がある」プランを削除しようとした場合は
- * QueryException(23000) が発生しうる。本Actionでは事前チェックでは弾かず、
- * 発生時は素通りさせる（Laravelの例外ハンドラでDB例外として処理される想定）。
+ * 受講者の判定は User.plan_id の紐づきで行い、退会済み(論理削除)の受講生も含める。
+ * 利用履歴(user_plan_logs)が残っているプランも削除不可とする。
+ * どちらも DB の外部キー(restrictOnDelete)で削除が拒否されるため、事前に判定してエラー画面にならないようにする。
  *
- * @throws PlanNotDeletableException 下書き以外、または受講者が紐づいている場合
+ * @throws PlanNotDeletableException 下書き以外、または受講者・利用履歴がある場合
  */
 final class DestroyAction
 {
     public function __invoke(Plan $plan): void
     {
-        if ($plan->status !== PlanStatus::Draft || $plan->users()->exists()) {
+        $hasUsers = $plan->users()->withTrashed()->exists();
+        $hasLogs = $plan->userPlanLogs()->exists();
+
+        if ($plan->status !== PlanStatus::Draft || $hasUsers || $hasLogs) {
             throw new PlanNotDeletableException;
         }
 

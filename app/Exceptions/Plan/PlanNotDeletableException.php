@@ -7,7 +7,7 @@ namespace App\Exceptions\Plan;
 use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 
 /**
- * プラン削除不可の場合に throw される（下書き以外、または受講者が紐づいている場合）。
+ * プラン削除不可の場合に throw される（下書き以外、または受講者・利用履歴がある場合）。
  * 判定は現在の User.plan_id の紐づきのみを見る。
  * 過去に user_plan_logs へ履歴が残っていても、現在の紐づきが無ければ削除不可の判定には含めない。
  */
