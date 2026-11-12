@@ -33,7 +33,7 @@ class UpdateTest extends TestCase
     }
 
     /**
-     * Q2のPM回答: 公開中プランでも制限なく編集できる仕様であることを検証。
+     * 公開中プランでも制限なく編集できる仕様であることを検証。
      */
     public function test_admin_can_update_published_plan_with_users_attached(): void
     {

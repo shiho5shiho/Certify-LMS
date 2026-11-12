@@ -79,7 +79,7 @@ class IndexTest extends TestCase
     }
 
     /**
-     * Q4のPM回答: 公開中 → 下書き → アーカイブの優先順で並ぶことを検証。
+     * 公開中 → 下書き → アーカイブの優先順で並ぶことを検証。
      */
     public function test_ordered_by_status_priority_then_sort_order(): void
     {
