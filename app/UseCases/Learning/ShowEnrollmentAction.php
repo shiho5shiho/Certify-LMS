@@ -55,7 +55,7 @@ final class ShowEnrollmentAction
                         ]),
                 ])
                 ->get()
-        : collect();
+            : collect();
 
         $sectionProgresses = $enrollment->sectionProgresses()
             ->pluck('section_id')

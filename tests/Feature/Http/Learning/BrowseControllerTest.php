@@ -357,6 +357,23 @@ class BrowseControllerTest extends TestCase
         $this->assertEnrollmentContents(Certification::factory()->draft()->create(), visible: false);
     }
 
+    public function test_show_enrollment_quizzes_tab_hides_contents_when_certification_archived(): void
+    {
+        [$student, $part] = $this->buildPartUnderCertification(Certification::factory()->archived()->create());
+        $chapter = Chapter::factory()->for($part)->create(['status' => ContentStatus::Published->value]);
+        Section::factory()->for($chapter)->create([
+            'status' => ContentStatus::Published->value,
+            'title' => '資格トップ表示確認用セクション',
+        ]);
+        $enrollment = $student->enrollments()->firstOrFail();
+
+        $this->actingAs($student)
+            ->get(route('learning.enrollments.show', ['enrollment' => $enrollment, 'tab' => 'quizzes']))
+            ->assertOk()
+            ->assertSee('この資格は現在公開されていません')
+            ->assertDontSee('資格トップ表示確認用セクション');
+    }
+
     /**
      * @return array{0: User, 1: Certification}
      */
