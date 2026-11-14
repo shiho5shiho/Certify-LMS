@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\UseCases\Learning;
 
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use App\Models\Enrollment;
 use App\Services\LearningHourTargetService;
@@ -18,6 +19,7 @@ use App\Services\StreakService;
  * タブは教材 / 演習問題の 2 タブで切替:
  * - contents (default): Part → Chapter → Section の階層一覧 + Section 読了状況
  * - quizzes: Section 別演習スコア一覧 + タブ内右上に 苦手分野ドリル / 解答履歴 / 問題別サマリへの動線
+ * 資格が公開中でない(下書き / アーカイブ)場合は教材一覧を返さない(進捗・ストリーク・学習時間は維持)。
  */
 final class ShowEnrollmentAction
 {
@@ -35,21 +37,25 @@ final class ShowEnrollmentAction
     {
         $enrollment->loadMissing(['certification', 'user', 'learningHourTarget']);
 
-        $parts = $enrollment->certification
-            ?->parts()
-            ->where('status', ContentStatus::Published->value)
-            ->ordered()
-            ->with([
-                'chapters' => fn ($query) => $query
-                    ->where('status', ContentStatus::Published->value)
-                    ->ordered()
-                    ->with([
-                        'sections' => fn ($q) => $q
-                            ->where('status', ContentStatus::Published->value)
-                            ->ordered(),
-                    ]),
-            ])
-            ->get() ?? collect();
+        $isCertificationPublished = $enrollment->certification?->status === CertificationStatus::Published;
+
+        $parts = $isCertificationPublished
+            ? $enrollment->certification
+                ->parts()
+                ->where('status', ContentStatus::Published->value)
+                ->ordered()
+                ->with([
+                    'chapters' => fn ($query) => $query
+                        ->where('status', ContentStatus::Published->value)
+                        ->ordered()
+                        ->with([
+                            'sections' => fn ($q) => $q
+                                ->where('status', ContentStatus::Published->value)
+                                ->ordered(),
+                        ]),
+                ])
+                ->get()
+            : collect();
 
         $sectionProgresses = $enrollment->sectionProgresses()
             ->pluck('section_id')
@@ -60,6 +66,7 @@ final class ShowEnrollmentAction
             : collect();
 
         return [
+            'isCertificationPublished' => $isCertificationPublished,
             'enrollment' => $enrollment,
             'parts' => $parts,
             'tab' => $tab,

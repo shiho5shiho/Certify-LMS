@@ -2,14 +2,20 @@
     教材タブの中身（enrollments/show.blade.php の「教材」タブで include）。
     構成: Part カード（連番 + タイトル + Chapter 数）→ 各 Chapter（タイトル + Section 数、Chapter ページへリンク）
       → Section リスト（読了済チェック + タイトル、Section ページへリンク）
-    教材未公開時は empty-state。JS なし（リンク遷移のみ）
+    資格が公開中でない場合は専用の empty-state、教材未公開時は empty-state。JS なし（リンク遷移のみ）
 --}}
 @php
+    /** @var bool $isCertificationPublished */
     /** @var \Illuminate\Database\Eloquent\Collection $parts */
     /** @var array<int, string> $completedSectionIds */
 @endphp
 
-@if ($parts->isEmpty())
+@if (! $isCertificationPublished)
+    <x-empty-state
+        icon="book-open"
+        title="この資格は現在公開されていません"
+        description="公開が停止されているため、教材は閲覧できません。進捗などの学習記録は保持されています。" />
+@elseif ($parts->isEmpty())
     <x-empty-state
         icon="book-open"
         title="教材がまだ公開されていません"

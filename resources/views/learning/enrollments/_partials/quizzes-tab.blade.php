@@ -2,9 +2,10 @@
     演習問題タブの中身（enrollments/show.blade.php の「演習問題」タブで include）。
     構成: 右上の動線（苦手分野ドリル / 解答履歴 / 問題別サマリへのリンク）
       → Part カードごとに Section 行リスト（各行: Section 名 + Chapter 名 + スコア表示〔挑戦回数 / 最高 / 最新、未挑戦バッジ〕+ 「演習へ」リンク）
-    演習未公開時は empty-state。JS なし（リンク遷移のみ）。スコアは算出済みの値を描画するだけ
+    資格が公開中でない場合は専用の empty-state、演習未公開時は empty-state。JS なし（リンク遷移のみ）。スコアは算出済みの値を描画するだけ
 --}}
 @php
+    /** @var bool $isCertificationPublished */    
     /** @var \Illuminate\Database\Eloquent\Collection $parts */
     /** @var \Illuminate\Support\Collection<string, \App\Services\SectionQuestionScoreSummary> $quizScoreSummaries */
     /** @var \App\Models\Enrollment $enrollment */
@@ -29,7 +30,12 @@
     </a>
 </div>
 
-@if ($parts->isEmpty())
+@if (! $isCertificationPublished)
+    <x-empty-state
+        icon="clipboard-document-check"
+        title="この資格は現在公開されていません"
+        description="公開が停止されているため、教材は閲覧できません。進捗などの学習記録は保持されています。" />
+@elseif ($parts->isEmpty())
     <x-empty-state
         icon="clipboard-document-check"
         title="演習問題が公開されていません"

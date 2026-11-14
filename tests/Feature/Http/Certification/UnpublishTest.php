@@ -53,4 +53,16 @@ class UnpublishTest extends TestCase
 
         $response->assertForbidden();
     }
+
+    public function test_show_page_displays_unpublish_confirm_description(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $cert = Certification::factory()->published()->create();
+
+        $this->actingAs($admin)
+            ->get(route('admin.certifications.show', $cert))
+            ->assertOk()
+            ->assertSee('既存受講生の受講登録と学習記録は保持されますが、公開停止中は教材を閲覧できません。')
+            ->assertDontSee('既存受講生の学習継続には影響しません');
+    }
 }
