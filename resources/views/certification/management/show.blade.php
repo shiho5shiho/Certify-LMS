@@ -137,7 +137,7 @@
             @include('certification.management._modals.transition-confirm', [
                 'id' => 'unpublish-confirm-modal',
                 'title' => '公開を停止しますか？',
-                'description' => '下書き状態に戻り、受講生カタログから非表示になります（既存受講生の学習継続には影響しません）。再度公開するには別途「公開」操作が必要です。',
+                'description' => '下書き状態に戻り、受講生カタログから非表示になります。既存受講生の受講登録と学習記録は保持されますが、公開停止中は教材を閲覧できません。再度公開するには別途「公開」操作が必要です。',
                 'action' => route('admin.certifications.unpublish', $certification),
                 'buttonLabel' => '公開停止',
                 'buttonVariant' => 'outline',
@@ -148,7 +148,7 @@
             @include('certification.management._modals.transition-confirm', [
                 'id' => 'archive-confirm-modal',
                 'title' => '資格をアーカイブしますか？',
-                'description' => 'アーカイブ後はカタログから非表示になり、新規受講登録ができなくなります（既存受講生の学習継続には影響しません）。',
+                'description' => 'アーカイブ後はカタログから非表示になり、新規受講登録ができなくなります。既存受講生の受講登録と学習記録は保持されますが、教材は閲覧できなくなります。',
                 'action' => route('admin.certifications.archive', $certification),
                 'buttonLabel' => 'アーカイブする',
                 'buttonVariant' => 'outline',

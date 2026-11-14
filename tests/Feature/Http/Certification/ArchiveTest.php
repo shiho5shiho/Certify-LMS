@@ -34,4 +34,16 @@ class ArchiveTest extends TestCase
 
         $response->assertStatus(409);
     }
+
+    public function test_show_page_displays_archive_confirm_description(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $cert = Certification::factory()->published()->create();
+
+        $this->actingAs($admin)
+            ->get(route('admin.certifications.show', $cert))
+            ->assertOk()
+            ->assertSee('既存受講生の受講登録と学習記録は保持されますが、教材は閲覧できなくなります。')
+            ->assertDontSee('既存受講生の学習継続には影響しません');
+    }
 }

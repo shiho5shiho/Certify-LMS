@@ -342,7 +342,7 @@ class BrowseControllerTest extends TestCase
             ->assertNotFound();
     }
 
-        public function test_show_enrollment_lists_contents_when_certification_published(): void
+    public function test_show_enrollment_lists_contents_when_certification_published(): void
     {
         $this->assertEnrollmentContents(Certification::factory()->published()->create(), visible: true);
     }
@@ -435,7 +435,7 @@ class BrowseControllerTest extends TestCase
         return [$student, $section];
     }
 
-        /**
+    /**
      * 資格トップ画面で、教材一覧の表示 / 非表示と、進捗サマリが常に表示されることを確認する。
      */
     private function assertEnrollmentContents(Certification $certification, bool $visible): void
@@ -457,6 +457,7 @@ class BrowseControllerTest extends TestCase
             $response->assertViewHas('parts', fn ($parts) => $parts->isNotEmpty());
             $response->assertSee('資格トップ表示確認用セクション');
         } else {
+            $response->assertSee('この資格は現在公開されていません');
             $response->assertViewHas('parts', fn ($parts) => $parts->isEmpty());
             $response->assertDontSee('資格トップ表示確認用セクション');
         }

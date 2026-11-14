@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\UseCases\Learning;
 
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use App\Models\Enrollment;
 use App\Services\LearningHourTargetService;
 use App\Services\LearningProgressService;
 use App\Services\SectionQuestionScoreService;
 use App\Services\StreakService;
-use App\Enums\CertificationStatus;
 
 /**
  * /learning/enrollments/{enrollment} (2 階層目、教材 Part 一覧) のデータを準備する Action。
@@ -41,20 +41,20 @@ final class ShowEnrollmentAction
 
         $parts = $isCertificationPublished
             ? $enrollment->certification
-            ->parts()
-            ->where('status', ContentStatus::Published->value)
-            ->ordered()
-            ->with([
-                'chapters' => fn ($query) => $query
-                    ->where('status', ContentStatus::Published->value)
-                    ->ordered()
-                    ->with([
-                        'sections' => fn ($q) => $q
-                            ->where('status', ContentStatus::Published->value)
-                            ->ordered(),
-                    ]),
-            ])
-            ->get()
+                ->parts()
+                ->where('status', ContentStatus::Published->value)
+                ->ordered()
+                ->with([
+                    'chapters' => fn ($query) => $query
+                        ->where('status', ContentStatus::Published->value)
+                        ->ordered()
+                        ->with([
+                            'sections' => fn ($q) => $q
+                                ->where('status', ContentStatus::Published->value)
+                                ->ordered(),
+                        ]),
+                ])
+                ->get()
         : collect();
 
         $sectionProgresses = $enrollment->sectionProgresses()
@@ -66,6 +66,7 @@ final class ShowEnrollmentAction
             : collect();
 
         return [
+            'isCertificationPublished' => $isCertificationPublished,
             'enrollment' => $enrollment,
             'parts' => $parts,
             'tab' => $tab,

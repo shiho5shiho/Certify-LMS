@@ -29,7 +29,12 @@
     </a>
 </div>
 
-@if ($parts->isEmpty())
+@if (! $isCertificationPublished)
+    <x-empty-state
+        icon="clipboard-document-check"
+        title="この資格は現在公開されていません"
+        description="公開が停止されているため、教材は閲覧できません。進捗などの学習記録は保持されています。" />
+@elseif ($parts->isEmpty())
     <x-empty-state
         icon="clipboard-document-check"
         title="演習問題が公開されていません"
