@@ -10,6 +10,7 @@ use App\Services\LearningHourTargetService;
 use App\Services\LearningProgressService;
 use App\Services\SectionQuestionScoreService;
 use App\Services\StreakService;
+use App\Enums\CertificationStatus;
 
 /**
  * /learning/enrollments/{enrollment} (2 階層目、教材 Part 一覧) のデータを準備する Action。
@@ -18,6 +19,7 @@ use App\Services\StreakService;
  * タブは教材 / 演習問題の 2 タブで切替:
  * - contents (default): Part → Chapter → Section の階層一覧 + Section 読了状況
  * - quizzes: Section 別演習スコア一覧 + タブ内右上に 苦手分野ドリル / 解答履歴 / 問題別サマリへの動線
+ * 資格が公開中でない(下書き / アーカイブ)場合は教材一覧を返さない(進捗・ストリーク・学習時間は維持)。
  */
 final class ShowEnrollmentAction
 {
@@ -35,8 +37,11 @@ final class ShowEnrollmentAction
     {
         $enrollment->loadMissing(['certification', 'user', 'learningHourTarget']);
 
-        $parts = $enrollment->certification
-            ?->parts()
+        $isCertificationPublished = $enrollment->certification?->status === CertificationStatus::Published;
+
+        $parts = $isCertificationPublished
+            ? $enrollment->certification
+            ->parts()
             ->where('status', ContentStatus::Published->value)
             ->ordered()
             ->with([
@@ -49,7 +54,8 @@ final class ShowEnrollmentAction
                             ->ordered(),
                     ]),
             ])
-            ->get() ?? collect();
+            ->get()
+        : collect();
 
         $sectionProgresses = $enrollment->sectionProgresses()
             ->pluck('section_id')

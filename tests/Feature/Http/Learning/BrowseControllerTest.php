@@ -342,6 +342,21 @@ class BrowseControllerTest extends TestCase
             ->assertNotFound();
     }
 
+        public function test_show_enrollment_lists_contents_when_certification_published(): void
+    {
+        $this->assertEnrollmentContents(Certification::factory()->published()->create(), visible: true);
+    }
+
+    public function test_show_enrollment_hides_contents_when_certification_archived(): void
+    {
+        $this->assertEnrollmentContents(Certification::factory()->archived()->create(), visible: false);
+    }
+
+    public function test_show_enrollment_hides_contents_when_certification_draft(): void
+    {
+        $this->assertEnrollmentContents(Certification::factory()->draft()->create(), visible: false);
+    }
+
     /**
      * @return array{0: User, 1: Certification}
      */
@@ -418,5 +433,32 @@ class BrowseControllerTest extends TestCase
         ]);
 
         return [$student, $section];
+    }
+
+        /**
+     * 資格トップ画面で、教材一覧の表示 / 非表示と、進捗サマリが常に表示されることを確認する。
+     */
+    private function assertEnrollmentContents(Certification $certification, bool $visible): void
+    {
+        [$student, $part] = $this->buildPartUnderCertification($certification);
+        $chapter = Chapter::factory()->for($part)->create(['status' => ContentStatus::Published->value]);
+        Section::factory()->for($chapter)->create([
+            'status' => ContentStatus::Published->value,
+            'title' => '資格トップ表示確認用セクション',
+        ]);
+        $enrollment = $student->enrollments()->firstOrFail();
+
+        $response = $this->actingAs($student)->get(route('learning.enrollments.show', $enrollment));
+
+        $response->assertOk();
+        $response->assertSee('読了 Section');
+
+        if ($visible) {
+            $response->assertViewHas('parts', fn ($parts) => $parts->isNotEmpty());
+            $response->assertSee('資格トップ表示確認用セクション');
+        } else {
+            $response->assertViewHas('parts', fn ($parts) => $parts->isEmpty());
+            $response->assertDontSee('資格トップ表示確認用セクション');
+        }
     }
 }
