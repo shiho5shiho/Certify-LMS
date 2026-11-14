@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\UseCases\ContentSearch;
 
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use App\Models\Section;
 use App\Models\User;
@@ -16,9 +17,10 @@ use Illuminate\Pagination\LengthAwarePaginator as PaginatorImpl;
  *
  * 検索結果は以下の条件で絞り込む(cascade visibility):
  * - 受講生が `enrollments` で登録済の資格内
+ * - 親 Certification が Published 状態
  * - Section / 親 Chapter / 親 Part がすべて Published 状態
  * - 親 Certification が SoftDelete されていない
- * 空キーワード / 未登録資格指定時は結果ゼロ件のレスポンスを返し、不要な検索クエリを発行しない。
+ * 空キーワード / 未登録資格・非公開資格指定時は結果ゼロ件のレスポンスを返し、不要な検索クエリを発行しない。
  */
 final class SearchAction
 {
@@ -42,6 +44,7 @@ final class SearchAction
 
         $enrolled = $student->enrollments()
             ->where('certification_id', $certificationId)
+            ->whereHas('certification', fn ($q) => $q->where('status', CertificationStatus::Published->value))
             ->exists();
         if (! $enrolled) {
             return [

@@ -78,6 +78,36 @@ class SearchTest extends TestCase
             ->assertDontSee('Database basics');
     }
 
+    public function test_archived_certification_returns_empty(): void
+    {
+        $student = User::factory()->student()->create();
+        $cert = Certification::factory()->archived()->create();
+        Enrollment::factory()->create(['user_id' => $student->id, 'certification_id' => $cert->id]);
+
+        [$part, $chapter, $section] = $this->makePartChain($cert, 'published');
+        $section->update(['title' => 'Archived topic', 'body' => 'Archived topic body']);
+
+        $this->actingAs($student)
+            ->get(route('contents.search', ['certification_id' => $cert->id, 'keyword' => 'Archived']))
+            ->assertOk()
+            ->assertDontSee('Archived topic');
+    }
+
+    public function test_draft_certification_returns_empty(): void
+    {
+        $student = User::factory()->student()->create();
+        $cert = Certification::factory()->draft()->create();
+        Enrollment::factory()->create(['user_id' => $student->id, 'certification_id' => $cert->id]);
+
+        [$part, $chapter, $section] = $this->makePartChain($cert, 'published');
+        $section->update(['title' => 'Draft cert topic', 'body' => 'Draft cert topic body']);
+
+        $this->actingAs($student)
+            ->get(route('contents.search', ['certification_id' => $cert->id, 'keyword' => 'Draft cert']))
+            ->assertOk()
+            ->assertDontSee('Draft cert topic');
+    }
+
     public function test_empty_keyword_returns_empty_paginator(): void
     {
         $student = User::factory()->student()->create();
