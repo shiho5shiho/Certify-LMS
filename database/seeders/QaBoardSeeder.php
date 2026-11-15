@@ -77,9 +77,12 @@ class QaBoardSeeder extends Seeder
                 $postedAt = now()->subDays(random_int(1, 60))->subMinutes(random_int(0, 1440));
 
                 $factory = QaThread::factory()->for($certification)->for($poster, 'user');
-                $thread = ($i % 3 === 0 ? $factory->resolved() : $factory)->create([
+                $isResolved = $i % 3 === 0;
+                $thread = ($isResolved ? $factory->resolved() : $factory)->create([
                     'title' => $content['title'],
                     'body' => $content['body'],
+                    // 解決済は、回答(投稿の 1〜3 時間後)より後に解決した日時にする
+                    'resolved_at' => $isResolved ? $postedAt->copy()->addHours(5) : null,
                     'created_at' => $postedAt,
                     'updated_at' => $postedAt,
                 ]);
