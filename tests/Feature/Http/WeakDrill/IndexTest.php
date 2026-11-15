@@ -54,4 +54,17 @@ class IndexTest extends TestCase
             ->get(route('quiz.drills.index', $enrollment))
             ->assertForbidden();
     }
+
+    public function test_archived_certification_returns_403(): void
+    {
+        $student = User::factory()->student()->create();
+        $enrollment = Enrollment::factory()->for($student)
+            ->for(Certification::factory()->archived())
+            ->state(['status' => EnrollmentStatus::Learning->value])
+            ->create();
+
+        $this->actingAs($student)
+            ->get(route('quiz.drills.index', $enrollment))
+            ->assertForbidden();
+    }
 }

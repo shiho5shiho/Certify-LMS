@@ -371,7 +371,8 @@ class BrowseControllerTest extends TestCase
             ->get(route('learning.enrollments.show', ['enrollment' => $enrollment, 'tab' => 'quizzes']))
             ->assertOk()
             ->assertSee('この資格は現在公開されていません')
-            ->assertDontSee('資格トップ表示確認用セクション');
+            ->assertDontSee('資格トップ表示確認用セクション')
+            ->assertDontSee(route('quiz.drills.index', $enrollment));
     }
 
     /**

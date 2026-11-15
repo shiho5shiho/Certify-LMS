@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit\Policies;
 
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use App\Enums\EnrollmentStatus;
 use App\Enums\UserStatus;
@@ -61,6 +62,22 @@ class SectionQuestionAnswerPolicyTest extends TestCase
         [$student, $question] = $this->buildScenario(EnrollmentStatus::Learning, ContentStatus::Draft);
 
         $this->assertFalse(app(SectionQuestionAnswerPolicy::class)->create($student, $question));
+    }
+
+    public function test_create_denies_when_certification_archived(): void
+    {
+        [$student, $question] = $this->buildScenario(EnrollmentStatus::Learning, ContentStatus::Published);
+        $question->section->chapter->part->certification->update(['status' => CertificationStatus::Archived->value]);
+
+        $this->assertFalse(app(SectionQuestionAnswerPolicy::class)->create($student, $question->fresh()));
+    }
+
+    public function test_create_denies_when_certification_draft(): void
+    {
+        [$student, $question] = $this->buildScenario(EnrollmentStatus::Learning, ContentStatus::Published);
+        $question->section->chapter->part->certification->update(['status' => CertificationStatus::Draft->value]);
+
+        $this->assertFalse(app(SectionQuestionAnswerPolicy::class)->create($student, $question->fresh()));
     }
 
     public function test_create_denies_non_student(): void

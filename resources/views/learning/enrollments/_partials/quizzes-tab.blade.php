@@ -13,11 +13,13 @@
 
 {{-- タブ内右上の動線(苦手分野ドリル / 解答履歴 / 問題別サマリ) --}}
 <div class="mb-4 flex flex-wrap items-center justify-end gap-2 text-xs">
-    <a href="{{ route('quiz.drills.index', $enrollment) }}"
-        class="inline-flex items-center gap-1 rounded-full border border-subtle bg-white px-3 py-1.5 font-semibold text-danger-700 transition-colors hover:bg-danger-50 hover:border-danger-200">
-        <x-icon name="exclamation-triangle" class="w-3.5 h-3.5" />
-        苦手分野ドリル
-    </a>
+    @if ($isCertificationPublished)
+        <a href="{{ route('quiz.drills.index', $enrollment) }}"
+            class="inline-flex items-center gap-1 rounded-full border border-subtle bg-white px-3 py-1.5 font-semibold text-danger-700 transition-colors hover:bg-danger-50 hover:border-danger-200">
+            <x-icon name="exclamation-triangle" class="w-3.5 h-3.5" />
+            苦手分野ドリル
+        </a>
+    @endif
     <a href="{{ route('quiz.history.index', $enrollment) }}"
         class="inline-flex items-center gap-1 rounded-full border border-subtle bg-white px-3 py-1.5 font-semibold text-ink-700 transition-colors hover:bg-primary-50 hover:border-primary-200 hover:text-primary-700">
         <x-icon name="clock" class="w-3.5 h-3.5" />

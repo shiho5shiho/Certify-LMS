@@ -53,6 +53,20 @@ class SectionQuizPolicyTest extends TestCase
         $this->assertFalse(app(SectionQuizPolicy::class)->view($student, $section));
     }
 
+    public function test_view_denies_when_certification_archived(): void
+    {
+        [$student, $section] = $this->buildUnderCertification(Certification::factory()->archived()->create());
+
+        $this->assertFalse(app(SectionQuizPolicy::class)->view($student, $section));
+    }
+
+    public function test_view_denies_when_certification_draft(): void
+    {
+        [$student, $section] = $this->buildUnderCertification(Certification::factory()->draft()->create());
+
+        $this->assertFalse(app(SectionQuizPolicy::class)->view($student, $section));
+    }
+
     public function test_view_denies_admin(): void
     {
         $admin = User::factory()->admin()->create();
@@ -70,6 +84,20 @@ class SectionQuizPolicyTest extends TestCase
         $certification = Certification::factory()->published()->create();
         Enrollment::factory()->for($student)->for($certification)->state(['status' => $status->value])->create();
         $part = Part::factory()->for($certification)->create(['status' => $partStatus->value]);
+        $chapter = Chapter::factory()->for($part)->create(['status' => ContentStatus::Published->value]);
+        $section = Section::factory()->for($chapter)->create(['status' => ContentStatus::Published->value]);
+
+        return [$student, $section];
+    }
+
+    /**
+     * @return array{0: User, 1: Section}
+     */
+    private function buildUnderCertification(Certification $certification): array
+    {
+        $student = User::factory()->student()->create();
+        Enrollment::factory()->for($student)->for($certification)->state(['status' => EnrollmentStatus::Learning->value])->create();
+        $part = Part::factory()->for($certification)->create(['status' => ContentStatus::Published->value]);
         $chapter = Chapter::factory()->for($part)->create(['status' => ContentStatus::Published->value]);
         $section = Section::factory()->for($chapter)->create(['status' => ContentStatus::Published->value]);
 

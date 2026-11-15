@@ -65,6 +65,30 @@ class WeakDrillPolicyTest extends TestCase
         $this->assertFalse(app(WeakDrillPolicy::class)->view($student, $enrollment));
     }
 
+    public function test_view_denies_when_certification_archived(): void
+    {
+        $student = User::factory()->student()->create();
+        $enrollment = Enrollment::factory()
+            ->for($student)
+            ->for(Certification::factory()->archived())
+            ->state(['status' => EnrollmentStatus::Learning->value])
+            ->create();
+
+        $this->assertFalse(app(WeakDrillPolicy::class)->view($student, $enrollment));
+    }
+
+    public function test_view_denies_when_certification_draft(): void
+    {
+        $student = User::factory()->student()->create();
+        $enrollment = Enrollment::factory()
+            ->for($student)
+            ->for(Certification::factory()->draft())
+            ->state(['status' => EnrollmentStatus::Learning->value])
+            ->create();
+
+        $this->assertFalse(app(WeakDrillPolicy::class)->view($student, $enrollment));
+    }
+
     public function test_view_denies_admin(): void
     {
         $admin = User::factory()->admin()->create();

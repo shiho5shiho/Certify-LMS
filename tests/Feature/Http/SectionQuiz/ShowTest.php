@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\SectionQuiz;
 
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use App\Enums\EnrollmentStatus;
 use App\Enums\UserStatus;
@@ -47,6 +48,21 @@ class ShowTest extends TestCase
 
         $this->actingAs($student)
             ->get(route('quiz.sections.show', $section))
+            ->assertNotFound();
+    }
+
+    public function test_archived_certification_returns_404(): void
+    {
+        [$student, $section] = $this->buildScenario(EnrollmentStatus::Learning);
+        $question = SectionQuestion::factory()->forSection($section)->published()->withOptions(2)->create();
+        $section->chapter->part->certification->update(['status' => CertificationStatus::Archived->value]);
+
+        $this->actingAs($student)
+            ->get(route('quiz.sections.show', $section))
+            ->assertNotFound();
+
+        $this->actingAs($student)
+            ->get(route('quiz.sections.question', ['section' => $section, 'question' => $question]))
             ->assertNotFound();
     }
 
