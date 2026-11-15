@@ -12,7 +12,7 @@ use Symfony\Component\HttpKernel\Exception\ConflictHttpException;
 class PlanNotDeletableException extends ConflictHttpException
 {
     public function __construct(
-        string $message = 'このプランを削除できません。下書き かつ 受講者が紐づいていない場合のみ削除可能です。',
+        string $message = 'このプランを削除できません。下書き かつ 受講者・利用履歴がない場合のみ削除可能です。',
         ?\Throwable $previous = null,
     ) {
         parent::__construct($message, $previous);
