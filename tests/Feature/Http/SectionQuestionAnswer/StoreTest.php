@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\SectionQuestionAnswer;
 
 use App\Enums\AnswerSource;
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use App\Enums\EnrollmentStatus;
 use App\Enums\UserStatus;
@@ -115,6 +116,23 @@ class StoreTest extends TestCase
             ]);
 
         $response->assertForbidden();
+    }
+
+    public function test_archived_certification_answer_is_forbidden(): void
+    {
+        [$student, $section, $question] = $this->buildSectionScenario();
+        $section->chapter->part->certification->update(['status' => CertificationStatus::Archived->value]);
+        $correctOption = $question->options->firstWhere('is_correct', true);
+
+        $this->actingAs($student)
+            ->post(route('quiz.answers.store', $question), [
+                'selected_option_id' => $correctOption->id,
+                'source' => AnswerSource::SectionQuiz->value,
+                'section_id' => $section->id,
+            ])
+            ->assertForbidden();
+
+        $this->assertDatabaseCount('section_question_answers', 0);
     }
 
     /**
