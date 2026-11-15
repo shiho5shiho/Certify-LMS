@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Feature\Http\AiChat;
 
 use App\Enums\AiChatMessageStatus;
+use App\Enums\CertificationStatus;
 use App\Models\AiChatConversation;
 use App\Models\AiChatMessage;
 use App\Models\Certification;
@@ -245,22 +246,42 @@ class AiChatMessageTest extends TestCase
         });
     }
 
-    public function test_long_section_body_is_truncated_with_heading_list(): void
+    public function test_only_part_chapter_section_headings_are_sent_without_body(): void
     {
-        config(['ai-chat.section_body_limit' => 20]);
-        $this->section->update(['body' => "## はじめに\n".str_repeat('あ', 100)."\n## 後半の見出し\n後半の本文"]);
+        $this->section->update(['body' => "## 本文中の見出し\n本文の内容"]);
         Http::fake([self::GEMINI_URL => Http::response($this->geminiResponse('回答です。'))]);
         $conversation = AiChatConversation::factory()->for($this->student)->forSection($this->section)->create();
 
         $this->actingAs($this->student)
-            ->postJson($this->messagesUrl($conversation), ['content' => '後半の内容は？'])
+            ->postJson($this->messagesUrl($conversation), ['content' => 'この教材の要点は？'])
             ->assertOk();
 
         Http::assertSent(function (Request $request) {
             $system = $request['systemInstruction']['parts'][0]['text'];
 
-            return str_contains($system, '## 後半の見出し')
-                && ! str_contains($system, '後半の本文');
+            return str_contains($system, $this->section->chapter->part->title)
+                && str_contains($system, $this->section->chapter->title)
+                && str_contains($system, $this->section->title)
+                && ! str_contains($system, '本文中の見出し')
+                && ! str_contains($system, '本文の内容');
+        });
+    }
+
+    public function test_section_context_is_not_sent_when_certification_archived(): void
+    {
+        Http::fake([self::GEMINI_URL => Http::response($this->geminiResponse('回答です。'))]);
+        $conversation = AiChatConversation::factory()->for($this->student)->forSection($this->section)->create();
+        $this->certification->update(['status' => CertificationStatus::Archived->value]);
+
+        $this->actingAs($this->student)
+            ->postJson($this->messagesUrl($conversation), ['content' => 'この教材の要点は？'])
+            ->assertOk();
+
+        Http::assertSent(function (Request $request) {
+            $system = $request['systemInstruction']['parts'][0]['text'];
+
+            return ! str_contains($system, '受講生が閲覧中の教材')
+                && ! str_contains($system, $this->section->title);
         });
     }
 
