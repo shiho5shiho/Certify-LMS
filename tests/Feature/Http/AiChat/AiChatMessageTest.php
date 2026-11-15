@@ -267,7 +267,7 @@ class AiChatMessageTest extends TestCase
         });
     }
 
-    public function test_section_context_is_not_sent_when_certification_archived(): void
+    public function test_certification_and_section_context_are_not_sent_when_certification_archived(): void
     {
         Http::fake([self::GEMINI_URL => Http::response($this->geminiResponse('回答です。'))]);
         $conversation = AiChatConversation::factory()->for($this->student)->forSection($this->section)->create();
@@ -280,8 +280,27 @@ class AiChatMessageTest extends TestCase
         Http::assertSent(function (Request $request) {
             $system = $request['systemInstruction']['parts'][0]['text'];
 
-            return ! str_contains($system, '受講生が閲覧中の教材')
+            return ! str_contains($system, '基本情報技術者試験')
+                && ! str_contains($system, '受講生が閲覧中の教材')
                 && ! str_contains($system, $this->section->title);
+        });
+    }
+
+    public function test_certification_name_is_not_sent_in_general_conversation_when_certification_archived(): void
+    {
+        Http::fake([self::GEMINI_URL => Http::response($this->geminiResponse('回答です。'))]);
+        $enrollment = Enrollment::where('user_id', $this->student->id)->firstOrFail();
+        $conversation = AiChatConversation::factory()->for($this->student)->forEnrollment($enrollment)->create();
+        $this->certification->update(['status' => CertificationStatus::Archived->value]);
+
+        $this->actingAs($this->student)
+            ->postJson($this->messagesUrl($conversation), ['content' => '勉強の進め方は？'])
+            ->assertOk();
+
+        Http::assertSent(function (Request $request) {
+            $system = $request['systemInstruction']['parts'][0]['text'];
+
+            return ! str_contains($system, '基本情報技術者試験');
         });
     }
 
