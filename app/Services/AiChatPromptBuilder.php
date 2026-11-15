@@ -15,7 +15,7 @@ use App\Models\Section;
  * Gemini に渡すシステムへの指示(資格・教材の文脈)と、会話の履歴を組み立てる。
  *
  * - 資格: 教材から開いた会話は教材の資格、それ以外は会話の受講登録 → 既定の受講登録(learning / passed のみ)
- * - 教材: タイトルと本文。本文が上限文字数を超える場合は先頭部分と本文全体の見出し一覧を渡す
+ * - 教材: Part / Chapter / Section の見出し(タイトル)のみ。本文は渡さない。受講生に公開されていない教材は渡さない
  * - 履歴: 直近 N 件(config: ai-chat.history_limit)。エラーになったやり取りは、その直前の質問ごと除く
  */
 final class AiChatPromptBuilder
@@ -49,8 +49,8 @@ final class AiChatPromptBuilder
             $blocks[] = "## 受講生が学習中の資格\n{$certificationName}";
         }
 
-        if ($conversation->section !== null) {
-            $blocks[] = "## 受講生が閲覧中の教材\nタイトル: {$conversation->section->title}\n\n".$this->sectionBody($conversation->section);
+        if ($conversation->section?->isVisibleToStudent()) {
+            $blocks[] = "## 受講生が閲覧中の教材\n".$this->sectionHeadings($conversation->section);
         }
 
         return implode("\n\n", $blocks);
@@ -73,22 +73,11 @@ final class AiChatPromptBuilder
         return $enrollment->certification?->name;
     }
 
-    private function sectionBody(Section $section): string
+    private function sectionHeadings(Section $section): string
     {
-        $body = (string) $section->body;
-        $limit = (int) config('ai-chat.section_body_limit');
-
-        if (mb_strlen($body) <= $limit) {
-            return "本文:\n{$body}";
-        }
-
-        // 後半に回答に必要な情報がある場合に備え、本文全体の見出し一覧を添える
-        $headings = collect(preg_split('/\R/u', $body))
-            ->filter(fn (string $line) => preg_match('/^#{1,6}\s+\S/u', $line) === 1)
-            ->implode("\n");
-
-        return "本文(先頭 {$limit} 文字のみ。以降は省略):\n".mb_substr($body, 0, $limit)
-            ."\n\n本文全体の見出し一覧:\n".$headings;
+        return "Part: {$section->chapter->part->title}\n"
+            ."Chapter: {$section->chapter->title}\n"
+            ."Section: {$section->title}";
     }
 
     /**
