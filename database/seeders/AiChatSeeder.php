@@ -46,9 +46,14 @@ final class AiChatSeeder extends Seeder
             return;
         }
 
-        $section = $this->publishedSection($enrollment);
-        if ($section !== null) {
-            $this->seedSectionConversation($student, $enrollment, $section);
+        // 公開中の教材がある受講登録を探し、教材から始めた会話を投入する
+        $sectionEnrollment = Enrollment::query()
+            ->where('user_id', $student->id)
+            ->where('status', EnrollmentStatus::Learning->value)
+            ->get()
+            ->first(fn (Enrollment $candidate) => $this->publishedSection($candidate) !== null);
+        if ($sectionEnrollment !== null) {
+            $this->seedSectionConversation($student, $sectionEnrollment, $this->publishedSection($sectionEnrollment));
         }
 
         $this->seedErrorConversation($student, $enrollment);
