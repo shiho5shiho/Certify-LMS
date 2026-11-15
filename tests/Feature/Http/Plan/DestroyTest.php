@@ -88,7 +88,7 @@ class DestroyTest extends TestCase
 
         // Assert
         $response->assertRedirect(route('admin.plans.show', $plan));
-        $response->assertSessionHas('error', 'このプランを削除できません。下書き かつ 受講者が紐づいていない場合のみ削除可能です。');
+        $response->assertSessionHas('error', 'このプランを削除できません。下書き かつ 受講者・利用履歴がない場合のみ削除可能です。');
         $this->assertDatabaseHas('plans', ['id' => $plan->id]);
     }
 
@@ -109,7 +109,7 @@ class DestroyTest extends TestCase
 
         // Assert
         $response->assertRedirect(route('admin.plans.show', $plan));
-        $response->assertSessionHas('error', 'このプランを削除できません。下書き かつ 受講者が紐づいていない場合のみ削除可能です。');
+        $response->assertSessionHas('error', 'このプランを削除できません。下書き かつ 受講者・利用履歴がない場合のみ削除可能です。');
         $this->assertDatabaseHas('plans', ['id' => $plan->id]);
     }
 
