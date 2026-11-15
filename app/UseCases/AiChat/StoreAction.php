@@ -9,6 +9,7 @@ use App\Models\AiChatConversation;
 use App\Models\Enrollment;
 use App\Models\Section;
 use App\Models\User;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * AI 相談の会話の作成。
@@ -25,6 +26,10 @@ final class StoreAction
      */
     public function __invoke(User $student, ?Section $section): array
     {
+        if ($section !== null && ! $section->isVisibleToStudent()) {
+            throw new NotFoundHttpException;
+        }
+
         if ($section !== null) {
             $existing = $student->aiChatConversations()
                 ->where('section_id', $section->id)

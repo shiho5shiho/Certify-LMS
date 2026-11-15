@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\CertificationStatus;
 use App\Enums\ContentStatus;
 use Database\Factories\SectionFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -78,6 +79,22 @@ class Section extends Model
     public function progresses(): HasMany
     {
         return $this->hasMany(SectionProgress::class);
+    }
+
+    /**
+     * 受講生に公開されているか(Section / Chapter / Part がすべて Published かつ資格が公開中)。
+     */
+    public function isVisibleToStudent(): bool
+    {
+        $this->loadMissing('chapter.part.certification');
+        $chapter = $this->chapter;
+        $part = $chapter?->part;
+        $certification = $part?->certification;
+
+        return $this->status === ContentStatus::Published
+            && $chapter?->status === ContentStatus::Published
+            && $part?->status === ContentStatus::Published
+            && $certification?->status === CertificationStatus::Published;
     }
 
     public function scopePublished(Builder $query): Builder

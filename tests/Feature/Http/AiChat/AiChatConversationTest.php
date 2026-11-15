@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tests\Feature\Http\AiChat;
 
+use App\Enums\CertificationStatus;
+use App\Enums\ContentStatus;
 use App\Models\AiChatConversation;
 use App\Models\AiChatMessage;
 use App\Models\Certification;
@@ -115,6 +117,34 @@ class AiChatConversationTest extends TestCase
                 'section_id' => $otherSection->id,
             ])
             ->assertForbidden();
+
+        $this->assertDatabaseCount('ai_chat_conversations', 0);
+    }
+
+    public function test_cannot_use_section_of_archived_certification(): void
+    {
+        $this->section->chapter->part->certification->update(['status' => CertificationStatus::Archived->value]);
+
+        $this->actingAs($this->student)
+            ->postJson(route('ai-chat.conversations.store'), [
+                'source' => 'widget',
+                'section_id' => $this->section->id,
+            ])
+            ->assertNotFound();
+
+        $this->assertDatabaseCount('ai_chat_conversations', 0);
+    }
+
+    public function test_cannot_use_draft_section(): void
+    {
+        $this->section->update(['status' => ContentStatus::Draft->value]);
+
+        $this->actingAs($this->student)
+            ->postJson(route('ai-chat.conversations.store'), [
+                'source' => 'widget',
+                'section_id' => $this->section->id,
+            ])
+            ->assertNotFound();
 
         $this->assertDatabaseCount('ai_chat_conversations', 0);
     }
