@@ -10,6 +10,8 @@ use App\Models\Certification;
 use App\Models\Enrollment;
 use App\Models\LearningSession;
 use App\Models\Meeting;
+use App\Models\QaReply;
+use App\Models\QaThread;
 use App\Models\User;
 use App\Services\ChatUnreadCountService;
 use App\UseCases\Dashboard\FetchCoachDashboardAction;
@@ -165,6 +167,24 @@ class FetchCoachDashboardActionTest extends TestCase
         $vm = app(FetchCoachDashboardAction::class)($coach);
 
         $this->assertNull($vm->unreadChatCount);
+    }
+
+    public function test_unanswered_qa_counts_only_unresolved_threads_without_replies_in_assigned_certifications(): void
+    {
+        $coach = User::factory()->coach()->inProgress()->create();
+        $myCert = Certification::factory()->published()->create();
+        $otherCert = Certification::factory()->published()->create();
+        $this->attachCoach($myCert, $coach);
+
+        $target = QaThread::factory()->for($myCert)->create();
+        QaThread::factory()->for($myCert)->resolved()->create();
+        QaReply::factory()->for(QaThread::factory()->for($myCert), 'thread')->create();
+        QaThread::factory()->for($otherCert)->create();
+
+        $vm = app(FetchCoachDashboardAction::class)($coach);
+
+        $this->assertSame(1, $vm->unansweredQaCount);
+        $this->assertSame([$target->id], $vm->recentQaThreads->pluck('id')->all());
     }
 
     private function attachCoach(Certification $certification, User $coach): void
