@@ -267,6 +267,28 @@ class AiChatMessageTest extends TestCase
         });
     }
 
+    public function test_section_headings_are_numbered_by_published_order(): void
+    {
+        $chapter = $this->section->chapter;
+        $this->section->update(['order' => 3]);
+        Section::factory()->forChapter($chapter)->published()->create(['order' => 1]);
+        Section::factory()->forChapter($chapter)->draft()->create(['order' => 2]);
+        Http::fake([self::GEMINI_URL => Http::response($this->geminiResponse('回答です。'))]);
+        $conversation = AiChatConversation::factory()->for($this->student)->forSection($this->section)->create();
+
+        $this->actingAs($this->student)
+            ->postJson($this->messagesUrl($conversation), ['content' => 'この教材の要点は？'])
+            ->assertOk();
+
+        Http::assertSent(function (Request $request) use ($chapter) {
+            $system = $request['systemInstruction']['parts'][0]['text'];
+
+            return str_contains($system, "Part 1: {$chapter->part->title}")
+                && str_contains($system, "Chapter 1: {$chapter->title}")
+                && str_contains($system, "Section 2: {$this->section->title}");
+        });
+    }
+
     public function test_certification_and_section_context_are_not_sent_when_certification_archived(): void
     {
         Http::fake([self::GEMINI_URL => Http::response($this->geminiResponse('回答です。'))]);
