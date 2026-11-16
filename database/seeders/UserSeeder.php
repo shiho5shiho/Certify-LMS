@@ -8,6 +8,7 @@ use App\Enums\UserStatus;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * 開発用シードユーザー。
@@ -26,6 +27,8 @@ use Illuminate\Support\Facades\Hash;
  *    - student × graduated × 3 (卒業、修了証 DL のみ可、プラン機能ロック)
  *    - student × withdrawn × 2 (退会、soft delete)
  *
+ * 3. **アイコン画像**: 設定済み / 未設定を混在させる(設定・プロフィール画面の確認用)。
+ *
  * Plan / Enrollment 等への紐づけは依存 Seeder(PlanSeeder / EnrollmentSeeder 等) で行う。
  * 本 Seeder は **User + UserStatus** の網羅性のみ担保する(単一責任)。
  */
@@ -35,6 +38,7 @@ class UserSeeder extends Seeder
     {
         $this->createFixedAccounts();
         $this->createDemoStudents();
+        $this->setAvatars();
     }
 
     /**
@@ -154,5 +158,45 @@ class UserSeeder extends Seeder
                 'deleted_at' => now()->subDays(fake()->numberBetween(1, 60)),
                 'email' => fn () => 'withdrawn_'.now()->timestamp.'_'.fake()->unique()->randomNumber(5).'@certify-lms.test',
             ]);
+    }
+
+    /**
+     * アイコン画像の設定済み / 未設定を混在させる(差し替え・削除・未設定時のイニシャル表示を確認する)。
+     * 設定済み: コーチ太郎 / 固定の受講生 / 修了済の受講生 1 名。それ以外は未設定のまま。
+     * 保存先・URL の形式はアップロード機能(Avatar\StoreAction)にそろえる。
+     */
+    private function setAvatars(): void
+    {
+        $targets = [
+            'coach' => [User::query()->where('email', 'coach@certify-lms.test')->first(), [13, 148, 136]],
+            'student' => [User::query()->where('email', 'student@certify-lms.test')->first(), [124, 58, 237]],
+            'graduated' => [User::query()->where('status', UserStatus::Graduated->value)->orderBy('id')->first(), [217, 119, 6]],
+        ];
+
+        foreach ($targets as $key => [$user, $rgb]) {
+            if ($user === null) {
+                continue;
+            }
+
+            $path = "avatars/seed-{$key}.png";
+            Storage::disk('public')->put($path, $this->solidColorPng($rgb));
+            $user->update(['avatar_url' => '/storage/'.$path]);
+        }
+    }
+
+    /**
+     * 単色の PNG 画像(200×200)を作る。
+     *
+     * @param array{int, int, int} $rgb
+     */
+    private function solidColorPng(array $rgb): string
+    {
+        $image = imagecreatetruecolor(200, 200);
+        imagefill($image, 0, 0, imagecolorallocate($image, ...$rgb));
+
+        ob_start();
+        imagepng($image);
+
+        return (string) ob_get_clean();
     }
 }
