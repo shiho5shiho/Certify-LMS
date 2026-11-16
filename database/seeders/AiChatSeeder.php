@@ -62,10 +62,12 @@ final class AiChatSeeder extends Seeder
             return $default;
         }
 
+        // 受講登録は同じ時刻に作られるため、作成日時が同じときは ID(ULID = 作成順)で順番を決める
         return Enrollment::query()
             ->where('user_id', $student->id)
             ->where('status', EnrollmentStatus::Learning->value)
             ->orderBy('created_at')
+            ->orderBy('id')
             ->first();
     }
 
