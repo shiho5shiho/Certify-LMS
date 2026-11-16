@@ -6,16 +6,20 @@ namespace App\Services;
 
 use App\Enums\AiChatMessageRole;
 use App\Enums\AiChatMessageStatus;
+use App\Enums\CertificationStatus;
+use App\Enums\ContentStatus;
 use App\Enums\EnrollmentStatus;
 use App\Models\AiChatConversation;
 use App\Models\AiChatMessage;
+use App\Models\Certification;
 use App\Models\Section;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Gemini に渡すシステムへの指示(資格・教材の文脈)と、会話の履歴を組み立てる。
  *
- * - 資格: 教材から開いた会話は教材の資格、それ以外は会話の受講登録 → 既定の受講登録(learning / passed のみ)
- * - 教材: Part / Chapter / Section の見出し(タイトル)のみ。本文は渡さない。受講生に公開されていない教材は渡さない
+ * - 資格: 教材から開いた会話は教材の資格、それ以外は会話の受講登録 → 既定の受講登録(learning / passed のみ)。公開中でない資格は資格名も渡さない
+ * - 教材: Part / Chapter / Section の番号(公開中の教材の中での並び順)と見出し(タイトル)のみ。本文は渡さない。受講生に公開されていない教材は渡さない
  * - 履歴: 直近 N 件(config: ai-chat.history_limit)。エラーになったやり取りは、その直前の質問ごと除く
  */
 final class AiChatPromptBuilder
@@ -58,9 +62,10 @@ final class AiChatPromptBuilder
 
     private function certificationName(AiChatConversation $conversation): ?string
     {
+        // 教材から開いた会話は教材の資格だけを使う(公開中でなくても、ほかの受講登録の資格には切り替えない)
         $sectionCertification = $conversation->section?->chapter?->part?->certification;
         if ($sectionCertification !== null) {
-            return $sectionCertification->name;
+            return $this->publishedCertificationName($sectionCertification);
         }
 
         // 画面のコンテキストバッジ(_partials/context-badges)と同じ解決順・同じ状態条件にそろえる
@@ -70,14 +75,34 @@ final class AiChatPromptBuilder
             return null;
         }
 
-        return $enrollment->certification?->name;
+        return $this->publishedCertificationName($enrollment->certification);
+    }
+
+    private function publishedCertificationName(?Certification $certification): ?string
+    {
+        return $certification?->status === CertificationStatus::Published ? $certification->name : null;
     }
 
     private function sectionHeadings(Section $section): string
     {
-        return "Part: {$section->chapter->part->title}\n"
-            ."Chapter: {$section->chapter->title}\n"
-            ."Section: {$section->title}";
+        $chapter = $section->chapter;
+        $part = $chapter->part;
+
+        // 番号は教材画面と同じく、公開中の教材の中での並び順(1 始まり)
+        $partNo = $this->position($part->certification->parts(), $part->id);
+        $chapterNo = $this->position($part->chapters(), $chapter->id);
+        $sectionNo = $this->position($chapter->sections(), $section->id);
+
+        return "Part {$partNo}: {$part->title}\n"
+            ."Chapter {$chapterNo}: {$chapter->title}\n"
+            ."Section {$sectionNo}: {$section->title}";
+    }
+
+    private function position(HasMany $siblings, string $id): int
+    {
+        $ids = $siblings->where('status', ContentStatus::Published->value)->ordered()->pluck('id');
+
+        return $ids->search($id) + 1;
     }
 
     /**
